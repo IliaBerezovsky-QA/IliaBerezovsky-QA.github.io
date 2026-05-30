@@ -409,6 +409,119 @@ button {
     animation: levelTextPop 3s ease-in-out forwards;
 }
 
+.newspaper-delivery {
+    position: absolute;
+    inset: 0;
+    z-index: 150;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.newspaper-crow {
+    position: absolute;
+    right: -150px;
+    top: 80px;
+    width: 145px;
+    transform: scaleX(-1) rotate(-8deg);
+    filter: drop-shadow(0 10px 0 rgba(0,0,0,.18));
+}
+
+.newspaper-letter {
+    position: absolute;
+    left: 50%;
+    top: 150px;
+    font-size: 46px;
+    opacity: 0;
+    filter: drop-shadow(0 8px 0 rgba(0,0,0,.15));
+}
+
+.newspaper-crow.run {
+    animation: newspaperCrowFly 2.45s ease-in-out forwards;
+}
+
+.newspaper-letter.run {
+    animation: newspaperLetterDrop 2.05s ease-in forwards;
+    animation-delay: .72s;
+}
+
+.newspaper-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 180;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(2, 6, 23, .45);
+    backdrop-filter: blur(3px);
+}
+
+.newspaper-card {
+    width: min(355px, 92vw);
+    min-height: 250px;
+    padding: 24px 22px 22px;
+    border-radius: 28px;
+    border: 6px solid #5b3417;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,0) 25%),
+        linear-gradient(180deg, #fff7d6 0%, #f8dfa3 100%);
+    box-shadow:
+        inset 0 4px 0 rgba(255,255,255,.7),
+        0 10px 0 #3a1e0c,
+        0 26px 42px rgba(0,0,0,.42);
+    text-align: center;
+    transform: rotate(-1deg);
+}
+
+.newspaper-modal.show .newspaper-card {
+    animation: newspaperPop .42s ease-out forwards;
+}
+
+.newspaper-title {
+    margin-bottom: 16px;
+    color: #3a1e0c;
+    font-size: 28px;
+    line-height: 1.05;
+    font-weight: 900;
+    text-shadow: 0 2px 0 rgba(255,255,255,.75);
+}
+
+.newspaper-text {
+    min-height: 86px;
+    margin-bottom: 22px;
+    color: #3a1e0c;
+    font-size: 22px;
+    line-height: 1.18;
+    font-weight: 900;
+}
+
+.newspaper-close-btn {
+    min-width: 190px;
+    height: 62px;
+    border: 5px solid #8b4513;
+    border-radius: 24px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 900;
+    box-shadow:
+        inset 0 3px 0 rgba(255,255,255,.65),
+        inset 0 -5px 0 rgba(154,69,16,.35),
+        0 7px 0 #6f320e,
+        0 16px 24px rgba(0,0,0,.25);
+    text-shadow:
+        0 2px 0 rgba(124,45,18,.95),
+        0 4px 8px rgba(0,0,0,.35);
+    cursor: pointer;
+}
+
+.newspaper-close-btn:active {
+    transform: scale(.96);
+    filter: brightness(.95);
+}
+
 .prizes-btn {
     position: absolute;
     right: 18px;
@@ -695,6 +808,75 @@ button {
     100% { opacity: 0; transform: translateY(-20px) scale(.75); }
 }
 
+@keyframes newspaperCrowFly {
+    0% {
+        transform: translate(0, 0) scaleX(-1) rotate(-10deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    45% {
+        transform: translate(-260px, 60px) scaleX(-1) rotate(4deg);
+        opacity: 1;
+    }
+
+    72% {
+        transform: translate(-430px, 16px) scaleX(-1) rotate(-8deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-650px, -35px) scaleX(-1) rotate(-14deg);
+        opacity: 0;
+    }
+}
+
+@keyframes newspaperLetterDrop {
+    0% {
+        opacity: 0;
+        transform: translate(80px, -20px) rotate(-18deg) scale(.7);
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    45% {
+        opacity: 1;
+        transform: translate(24px, 120px) rotate(14deg) scale(1.08);
+    }
+
+    78% {
+        opacity: 1;
+        transform: translate(-10px, 250px) rotate(-12deg) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-20px, 330px) rotate(10deg) scale(.86);
+    }
+}
+
+@keyframes newspaperPop {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(.68) rotate(-5deg);
+    }
+
+    70% {
+        opacity: 1;
+        transform: translateY(-6px) scale(1.06) rotate(1deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(-1deg);
+    }
+}
+
 @keyframes grannyHitSprite {
     0% { transform: translateX(0) rotate(0); }
     45% { transform: translateX(45px) rotate(-4deg); }
@@ -792,13 +974,26 @@ button {
         font-size: 30px;
     }
 
-    .onboarding-next-btn {
-    min-width: 150px;
-    height: 60px;
-    font-size: 24px;
-}
+    .newspaper-crow {
+        width: 125px;
+        top: 82px;
+    }
 
-.onboarding-skip-btn {
-    font-size: 20px;
-}
+    .newspaper-title {
+        font-size: 25px;
+    }
+
+    .newspaper-text {
+        font-size: 20px;
+    }
+
+    .onboarding-next-btn {
+        min-width: 150px;
+        height: 60px;
+        font-size: 24px;
+    }
+
+    .onboarding-skip-btn {
+        font-size: 20px;
+    }
 }

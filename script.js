@@ -6,6 +6,7 @@ let houseLevel = 1;
 let fruitPower = 1;
 let totalFruitScore = 0;
 let isLevelUpActive = false;
+let isNewspaperActive = false;
 let lastTouchEndTime = 0;
 let pawStepIndex = 0;
 let pawWalkTimer = null;
@@ -23,6 +24,24 @@ const houseNames = [
     "Усадьба",
     "Дворец дачника",
     "Империя 6 соток"
+];
+
+const newspaperMessages = [
+    "Бабушка отбила очередную атаку вороны. Эксперты шокированы.",
+    "Ворона Лариса требует переговоров.",
+    "Сосед заявил, что это нечестная конкуренция.",
+    "Бабушка купила вторую лопату. Эксперты обеспокоены.",
+    "Коза соседа перешла на сторону бабушки.",
+    "Урожай достиг рекордных значений. Ворона нервничает.",
+    "На участке замечена подозрительно довольная тыква.",
+    "Сосед подал жалобу в дачный комитет. Жалобу съела коза.",
+    "Ворона Лариса объявила сбор средств на восстановление репутации.",
+    "Бабушка получила звание Заслуженный Дачный Терминатор.",
+    "Эксперты не понимают, откуда у бабушки столько энергии.",
+    "Ворона утверждает, что это была самооборона.",
+    "Урожай снова пропал. Потом нашелся в сарае.",
+    "На участке замечен резкий рост авторитета бабушки.",
+    "Дачный рынок обрушился после рекордного урожая яблок."
 ];
 
 const loader = document.getElementById("loader");
@@ -46,7 +65,6 @@ const pumpkinsText = document.getElementById("pumpkins");
 const houseImg = document.getElementById("houseImg");
 const houseNameText = document.getElementById("houseName");
 const houseLevelText = document.getElementById("houseLevel");
-const nextUpgradeText = document.getElementById("nextUpgrade");
 
 const crow = document.getElementById("crow");
 const crowImg = document.getElementById("crowImg");
@@ -55,6 +73,13 @@ const hitSwipe = document.getElementById("hitSwipe");
 
 const levelUpOverlay = document.getElementById("levelUpOverlay");
 const levelUpText = document.getElementById("levelUpText");
+
+const newspaperDelivery = document.getElementById("newspaperDelivery");
+const newspaperCrow = document.getElementById("newspaperCrow");
+const newspaperLetter = document.getElementById("newspaperLetter");
+const newspaperModal = document.getElementById("newspaperModal");
+const newspaperText = document.getElementById("newspaperText");
+const newspaperCloseBtn = document.getElementById("newspaperCloseBtn");
 
 const bgMusic = new Audio("assets/fonsound.mp3");
 bgMusic.loop = true;
@@ -160,7 +185,6 @@ startBtn.addEventListener("click", () => {
 });
 
 onboardingNextBtn.addEventListener("click", () => {
-
     onboardingStep++;
 
     if (onboardingStep < onboardingSlides.length) {
@@ -176,7 +200,6 @@ onboardingSkipBtn.addEventListener("click", () => {
 });
 
 function finishOnboarding() {
-
     stopOnboardingMusic();
 
     onboarding.classList.add("hidden");
@@ -196,7 +219,12 @@ backBtn.addEventListener("click", () => {
     onboarding.classList.add("hidden");
     game.classList.add("hidden");
     prizesScreen.classList.add("hidden");
+    newspaperDelivery.classList.add("hidden");
+    newspaperModal.classList.add("hidden");
     loader.classList.remove("hidden");
+
+    isLevelUpActive = false;
+    isNewspaperActive = false;
 
     startPawWalk();
 
@@ -220,6 +248,10 @@ prizesBackBtn.addEventListener("click", () => {
 crow.addEventListener("click", (event) => {
     event.preventDefault();
     hitCrow();
+});
+
+newspaperCloseBtn.addEventListener("click", () => {
+    closeNewspaper();
 });
 
 function startPawWalk() {
@@ -333,6 +365,8 @@ function showOnboarding() {
     loader.classList.add("hidden");
     game.classList.add("hidden");
     prizesScreen.classList.add("hidden");
+    newspaperDelivery.classList.add("hidden");
+    newspaperModal.classList.add("hidden");
 
     onboardingStep = 0;
     onboardingImage.src = onboardingSlides[onboardingStep];
@@ -369,7 +403,7 @@ function updateUI() {
 }
 
 function hitCrow() {
-    if (isLevelUpActive) return;
+    if (isLevelUpActive || isNewspaperActive) return;
 
     startMusic();
 
@@ -456,7 +490,53 @@ function showLevelUpCelebration() {
         levelUpOverlay.classList.add("hidden");
         granny.classList.remove("level-up-hide");
         isLevelUpActive = false;
+
+        showNewspaperDelivery();
     }, 3000);
+}
+
+function showNewspaperDelivery() {
+    if (game.classList.contains("hidden")) return;
+
+    isNewspaperActive = true;
+
+    newspaperDelivery.classList.remove("hidden");
+    newspaperDelivery.classList.remove("run");
+
+    newspaperCrow.classList.remove("run");
+    newspaperLetter.classList.remove("run");
+
+    void newspaperDelivery.offsetWidth;
+
+    newspaperDelivery.classList.add("run");
+    newspaperCrow.classList.add("run");
+    newspaperLetter.classList.add("run");
+
+    setTimeout(() => {
+        newspaperDelivery.classList.add("hidden");
+        newspaperDelivery.classList.remove("run");
+        newspaperCrow.classList.remove("run");
+        newspaperLetter.classList.remove("run");
+
+        openNewspaper();
+    }, 2600);
+}
+
+function openNewspaper() {
+    newspaperText.textContent = getRandomItem(newspaperMessages);
+
+    newspaperModal.classList.remove("hidden");
+    newspaperModal.classList.remove("show");
+
+    void newspaperModal.offsetWidth;
+
+    newspaperModal.classList.add("show");
+}
+
+function closeNewspaper() {
+    newspaperModal.classList.add("hidden");
+    newspaperModal.classList.remove("show");
+    isNewspaperActive = false;
 }
 
 function getNextCost() {
