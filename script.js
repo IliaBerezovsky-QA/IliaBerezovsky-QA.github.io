@@ -154,47 +154,62 @@ let flappyScore = 0;
 let flappyFrame = 0;
 let flappyBestScore = 0;
 
-/* NEIGHBOR GOAT CATCH */
+/* NEIGHBOR TETRIS MODE */
 
 let neighborCtx = neighborCanvas ? neighborCanvas.getContext("2d") : null;
 let neighborAnimationId = null;
 let neighborRunning = false;
 let neighborDistance = 0;
 let neighborBestDistance = 0;
-let neighborFinishDistance = 30;
 let neighborFrame = 0;
-let neighborTimeLeft = 30;
-let neighborTimerStartedAt = 0;
-let neighborGoatPhrase = "Меее!";
+let neighborDropTimer = 0;
+let neighborDropInterval = 650;
+let neighborLastTime = 0;
+let neighborGameWon = false;
+let neighborNextPiece = null;
 
 const neighborControls = {
-    gas: false,
-    brake: false,
-    leanBack: false,
-    leanForward: false
+    left: false,
+    right: false,
+    rotate: false,
+    down: false
 };
 
-const neighborGoat = {
-    x: 160,
-    y: 260,
-    vx: 4.8,
-    vy: 4.2,
-    size: 62,
-    scale: 1,
-    rotation: 0
+const neighborTetris = {
+    cols: 10,
+    rows: 18,
+    board: [],
+    piece: null,
+    cell: 24,
+    boardX: 0,
+    boardY: 0,
+    score: 0,
+    lines: 0,
+    level: 1,
+    buildStage: 0
 };
 
-const neighborGoatPhrases = [
-    "Меее!",
-    "Не поймаешь!",
-    "Я к бабушке!",
-    "Сосед, отстань!",
-    "Меее-ракета!",
-    "Бабушка лучше!",
-    "Коза в домике!",
-    "Минус репутация соседа!"
+const neighborPieces = [
+    { icon: "🥔", matrix: [[1, 1, 1, 1]] },
+    { icon: "🥕", matrix: [[1, 0, 0], [1, 1, 1]] },
+    { icon: "🌽", matrix: [[0, 0, 1], [1, 1, 1]] },
+    { icon: "🧅", matrix: [[1, 1], [1, 1]] },
+    { icon: "🍅", matrix: [[0, 1, 1], [1, 1, 0]] },
+    { icon: "🥒", matrix: [[0, 1, 0], [1, 1, 1]] },
+    { icon: "🎃", matrix: [[1, 1, 0], [0, 1, 1]] }
 ];
 
+const neighborDedPhrases = [
+    "Фундамент из картошки!",
+    "Вот это стройка!",
+    "Дача сама себя не построит!",
+    "Овощ к овощу!",
+    "Лариса, не мешай!",
+    "Сейчас сарай поднимем!",
+    "Архитектура 6 соток!"
+];
+
+let neighborDedPhrase = "Дача сама себя не построит!";
 const crowPhrases = [
     "Одумайся!!!",
     "Одумайся!!!",
@@ -408,29 +423,28 @@ setupNeighborControlButton(neighborLeanBackBtn, "leanBack");
 setupNeighborControlButton(neighborLeanForwardBtn, "leanForward");
 
 if (neighborCanvas) {
-    neighborCanvas.addEventListener("pointerdown", (event) => {
+    neighborCanvas.addEventListener("click", (event) => {
         if (!neighborRunning) return;
 
         const rect = neighborCanvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
 
-        if (x < rect.width * 0.45) {
-            neighborControls.leanBack = true;
+        if (x < rect.width / 2) {
+            handleNeighborControl("left");
         } else {
-            neighborControls.gas = true;
+            handleNeighborControl("right");
         }
     });
-
-    neighborCanvas.addEventListener("pointerup", () => {
-        neighborControls.gas = false;
-        neighborControls.leanBack = false;
-    });
-
-    neighborCanvas.addEventListener("pointercancel", () => {
-        neighborControls.gas = false;
-        neighborControls.leanBack = false;
-    });
 }
+
+document.addEventListener("keydown", (event) => {
+    if (!neighborRunning || neighborMode.classList.contains("hidden")) return;
+
+    if (event.key === "ArrowLeft") handleNeighborControl("left");
+    if (event.key === "ArrowRight") handleNeighborControl("right");
+    if (event.key === "ArrowUp" || event.key === " ") handleNeighborControl("rotate");
+    if (event.key === "ArrowDown") handleNeighborControl("down");
+});
 
 
 function startPawWalk() {
@@ -1096,9 +1110,30 @@ function endFlappyGame() {
 function setupNeighborControlButton(button, controlName) {
     if (!button) return;
 
+    const mappedControl = {
+        leanBack: "left",
+        brake: "rotate",
+        gas: "down",
+        leanForward: "right"
+    }[controlName] || controlName;
+
+    button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        handleNeighborControl(mappedControl);
+        neighborControls[mappedControl] = true;
+    });
+
+    button.addEventListener("pointerup", (event) => {
+        event.preventDefault();
+        neighborControls[mappedControl] = false;
+    });
+
+    button.addEventListener("pointercancel", () => {
+        neighborControls[mappedControl] = false;
+    });
+
     button.addEventListener("click", (event) => {
         event.preventDefault();
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
     });
 }
 
@@ -1140,7 +1175,21 @@ function resizeNeighborCanvas() {
 
     neighborCtx = neighborCanvas.getContext("2d");
     neighborCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    neighborCtx.imageSmoothingEnabled = false;
+    neighborCtx.imageSmoothingEnabled = true;
+
+    calculateNeighborBoardSize(rect.width, rect.height);
+}
+
+function calculateNeighborBoardSize(width, height) {
+    const topSpace = 92;
+    const bottomSpace = 98;
+    const maxBoardWidth = width - 118;
+    const maxBoardHeight = height - topSpace - bottomSpace;
+
+    neighborTetris.cell = Math.floor(Math.min(maxBoardWidth / neighborTetris.cols, maxBoardHeight / neighborTetris.rows));
+    neighborTetris.cell = Math.max(17, Math.min(28, neighborTetris.cell));
+    neighborTetris.boardX = Math.floor((width - neighborTetris.cell * neighborTetris.cols) / 2) + 24;
+    neighborTetris.boardY = topSpace;
 }
 
 function startNeighborGame() {
@@ -1149,14 +1198,21 @@ function startNeighborGame() {
     resizeNeighborCanvas();
 
     neighborRunning = true;
+    neighborGameWon = false;
     neighborDistance = 0;
     neighborFrame = 0;
-    neighborFinishDistance = 30;
-    neighborTimeLeft = 30;
-    neighborTimerStartedAt = Date.now();
-    neighborGoatPhrase = "Меее!";
+    neighborDropTimer = 0;
+    neighborDropInterval = 650;
+    neighborLastTime = performance.now();
+    neighborDedPhrase = "Дача сама себя не построит!";
 
-    resetNeighborGoat();
+    neighborTetris.score = 0;
+    neighborTetris.lines = 0;
+    neighborTetris.level = 1;
+    neighborTetris.buildStage = 0;
+    neighborTetris.board = createNeighborBoard();
+    neighborNextPiece = createNeighborPiece();
+    spawnNeighborPiece();
 
     neighborDistanceText.textContent = "0";
     neighborStartScreen.classList.add("hidden");
@@ -1164,26 +1220,33 @@ function startNeighborGame() {
     neighborWinScreen.classList.add("hidden");
 
     cancelAnimationFrame(neighborAnimationId);
-    neighborLoop();
+    neighborLoop(performance.now());
 }
 
-function resetNeighborGoat() {
-    if (!neighborMode) return;
-
-    const rect = neighborMode.getBoundingClientRect();
-
-    neighborGoat.size = Math.max(54, Math.min(72, rect.width * 0.15));
-    neighborGoat.x = rect.width * 0.5;
-    neighborGoat.y = rect.height * 0.48;
-    neighborGoat.vx = getRandomGoatSpeed();
-    neighborGoat.vy = getRandomGoatSpeed();
-    neighborGoat.scale = 1;
-    neighborGoat.rotation = 0;
+function createNeighborBoard() {
+    return Array.from({ length: neighborTetris.rows }, () => Array(neighborTetris.cols).fill(null));
 }
 
-function getRandomGoatSpeed() {
-    const speed = random(42, 58) / 10;
-    return Math.random() > 0.5 ? speed : -speed;
+function createNeighborPiece() {
+    const template = getRandomItem(neighborPieces);
+
+    return {
+        icon: template.icon,
+        matrix: template.matrix.map((row) => row.slice()),
+        x: 3,
+        y: 0
+    };
+}
+
+function spawnNeighborPiece() {
+    neighborTetris.piece = neighborNextPiece || createNeighborPiece();
+    neighborNextPiece = createNeighborPiece();
+    neighborTetris.piece.x = Math.floor((neighborTetris.cols - neighborTetris.piece.matrix[0].length) / 2);
+    neighborTetris.piece.y = 0;
+
+    if (neighborCollides(neighborTetris.piece, 0, 0, neighborTetris.piece.matrix)) {
+        endNeighborGame(false);
+    }
 }
 
 function stopNeighborGame() {
@@ -1194,123 +1257,150 @@ function stopNeighborGame() {
         neighborAnimationId = null;
     }
 
-    neighborControls.gas = false;
-    neighborControls.brake = false;
-    neighborControls.leanBack = false;
-    neighborControls.leanForward = false;
+    neighborControls.left = false;
+    neighborControls.right = false;
+    neighborControls.rotate = false;
+    neighborControls.down = false;
 }
 
-function neighborLoop() {
+function neighborLoop(now) {
     if (!neighborRunning) return;
 
-    updateNeighborGoat();
+    const delta = now - neighborLastTime;
+    neighborLastTime = now;
+    neighborFrame++;
+
+    neighborDropTimer += delta;
+
+    const activeInterval = neighborControls.down ? 48 : neighborDropInterval;
+
+    if (neighborDropTimer >= activeInterval) {
+        neighborDropTimer = 0;
+        moveNeighborPiece(0, 1);
+    }
+
     drawNeighborGame();
-
-    if (neighborTimeLeft <= 0) {
-        endNeighborGame(false);
-        return;
-    }
-
-    if (neighborDistance >= neighborFinishDistance) {
-        endNeighborGame(true);
-        return;
-    }
-
     neighborAnimationId = requestAnimationFrame(neighborLoop);
 }
 
-function updateNeighborGoat() {
-    if (!neighborMode) return;
+function handleNeighborControl(control) {
+    if (!neighborRunning) return;
 
-    const rect = neighborMode.getBoundingClientRect();
-    const goat = neighborGoat;
+    if (control === "left") moveNeighborPiece(-1, 0);
+    if (control === "right") moveNeighborPiece(1, 0);
+    if (control === "rotate") rotateNeighborPiece();
+    if (control === "down") moveNeighborPiece(0, 1);
 
-    neighborFrame++;
-    neighborTimeLeft = Math.max(0, 30 - Math.floor((Date.now() - neighborTimerStartedAt) / 1000));
-
-    goat.x += goat.vx;
-    goat.y += goat.vy;
-    goat.rotation += 0.055 * Math.sign(goat.vx || 1);
-
-    const margin = goat.size * 0.55;
-    const topLimit = 86 + margin;
-    const bottomLimit = rect.height - margin - 18;
-    const leftLimit = margin;
-    const rightLimit = rect.width - margin;
-
-    if (goat.x < leftLimit) {
-        goat.x = leftLimit;
-        goat.vx = Math.abs(goat.vx) + 0.12;
-        goat.vy += random(-8, 8) / 10;
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
-    }
-
-    if (goat.x > rightLimit) {
-        goat.x = rightLimit;
-        goat.vx = -Math.abs(goat.vx) - 0.12;
-        goat.vy += random(-8, 8) / 10;
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
-    }
-
-    if (goat.y < topLimit) {
-        goat.y = topLimit;
-        goat.vy = Math.abs(goat.vy) + 0.12;
-        goat.vx += random(-8, 8) / 10;
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
-    }
-
-    if (goat.y > bottomLimit) {
-        goat.y = bottomLimit;
-        goat.vy = -Math.abs(goat.vy) - 0.12;
-        goat.vx += random(-8, 8) / 10;
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
-    }
-
-    const maxSpeed = 8.6;
-    goat.vx = Math.max(-maxSpeed, Math.min(maxSpeed, goat.vx));
-    goat.vy = Math.max(-maxSpeed, Math.min(maxSpeed, goat.vy));
-
-    goat.scale += (1 - goat.scale) * 0.16;
+    drawNeighborGame();
 }
 
-function catchNeighborGoat(clientX, clientY) {
-    if (!neighborRunning || !neighborCanvas) return;
+function moveNeighborPiece(dx, dy) {
+    const piece = neighborTetris.piece;
+    if (!piece) return false;
 
-    const rect = neighborCanvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const goat = neighborGoat;
+    if (!neighborCollides(piece, dx, dy, piece.matrix)) {
+        piece.x += dx;
+        piece.y += dy;
+        return true;
+    }
 
-    const dx = x - goat.x;
-    const dy = y - goat.y;
-    const catchRadius = goat.size * 0.68;
+    if (dy > 0) {
+        lockNeighborPiece();
+        clearNeighborLines();
+        spawnNeighborPiece();
+    }
 
-    if (Math.sqrt(dx * dx + dy * dy) <= catchRadius) {
-        neighborDistance++;
-        neighborBestDistance = Math.max(neighborBestDistance, neighborDistance);
-        neighborDistanceText.textContent = neighborDistance;
+    return false;
+}
 
-        goat.scale = 1.36;
-        goat.vx = getRandomGoatSpeed() * (1 + neighborDistance * 0.018);
-        goat.vy = getRandomGoatSpeed() * (1 + neighborDistance * 0.018);
-        goat.x = random(Math.floor(catchRadius), Math.floor(rect.width - catchRadius));
-        goat.y = random(Math.floor(118), Math.floor(rect.height - catchRadius - 24));
-        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+function rotateNeighborPiece() {
+    const piece = neighborTetris.piece;
+    if (!piece) return;
 
-        createNeighborCatchText(x, y);
+    const rotated = piece.matrix[0].map((_, index) => piece.matrix.map((row) => row[index]).reverse());
+
+    if (!neighborCollides(piece, 0, 0, rotated)) {
+        piece.matrix = rotated;
+        return;
+    }
+
+    if (!neighborCollides(piece, -1, 0, rotated)) {
+        piece.x -= 1;
+        piece.matrix = rotated;
+        return;
+    }
+
+    if (!neighborCollides(piece, 1, 0, rotated)) {
+        piece.x += 1;
+        piece.matrix = rotated;
     }
 }
 
-function createNeighborCatchText(x, y) {
-    const text = document.createElement("div");
-    text.className = "neighbor-catch-pop";
-    text.textContent = "+1 коза";
-    text.style.left = `${x}px`;
-    text.style.top = `${y}px`;
+function neighborCollides(piece, dx, dy, matrix) {
+    for (let y = 0; y < matrix.length; y++) {
+        for (let x = 0; x < matrix[y].length; x++) {
+            if (!matrix[y][x]) continue;
 
-    if (neighborMode) {
-        neighborMode.appendChild(text);
-        setTimeout(() => text.remove(), 850);
+            const boardX = piece.x + x + dx;
+            const boardY = piece.y + y + dy;
+
+            if (boardX < 0 || boardX >= neighborTetris.cols || boardY >= neighborTetris.rows) {
+                return true;
+            }
+
+            if (boardY >= 0 && neighborTetris.board[boardY][boardX]) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function lockNeighborPiece() {
+    const piece = neighborTetris.piece;
+    if (!piece) return;
+
+    piece.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (!value) return;
+
+            const boardY = piece.y + y;
+            const boardX = piece.x + x;
+
+            if (boardY >= 0 && boardY < neighborTetris.rows && boardX >= 0 && boardX < neighborTetris.cols) {
+                neighborTetris.board[boardY][boardX] = piece.icon;
+            }
+        });
+    });
+}
+
+function clearNeighborLines() {
+    let cleared = 0;
+
+    for (let y = neighborTetris.rows - 1; y >= 0; y--) {
+        if (neighborTetris.board[y].every(Boolean)) {
+            neighborTetris.board.splice(y, 1);
+            neighborTetris.board.unshift(Array(neighborTetris.cols).fill(null));
+            cleared++;
+            y++;
+        }
+    }
+
+    if (!cleared) return;
+
+    neighborTetris.lines += cleared;
+    neighborTetris.score += cleared * cleared * 100;
+    neighborTetris.level = Math.floor(neighborTetris.lines / 4) + 1;
+    neighborTetris.buildStage = Math.min(5, Math.floor(neighborTetris.lines / 2));
+    neighborDistance = neighborTetris.score;
+    neighborBestDistance = Math.max(neighborBestDistance, neighborDistance);
+    neighborDropInterval = Math.max(180, 650 - neighborTetris.level * 42);
+    neighborDedPhrase = getRandomItem(neighborDedPhrases);
+    neighborDistanceText.textContent = neighborTetris.score;
+
+    if (neighborTetris.lines >= 12) {
+        endNeighborGame(true);
     }
 }
 
@@ -1319,8 +1409,21 @@ function drawNeighborIntro() {
 
     const rect = neighborMode.getBoundingClientRect();
     drawNeighborBackground(rect.width, rect.height);
-    drawNeighborGoat(rect.width * 0.5, rect.height * 0.48, 1, 0);
-    drawNeighborText(rect.width, rect.height);
+    drawNeighborGrandpa(rect.width, rect.height);
+    drawNeighborHouse(rect.width - 82, rect.height - 132, 3);
+
+    neighborCtx.save();
+    neighborCtx.fillStyle = "rgba(255,255,255,.9)";
+    neighborCtx.strokeStyle = "#5b3417";
+    neighborCtx.lineWidth = 5;
+    roundRect(neighborCtx, 36, rect.height - 205, rect.width - 72, 76, 18, true, true);
+    neighborCtx.fillStyle = "#3a1e0c";
+    neighborCtx.font = "900 17px Arial";
+    neighborCtx.textAlign = "center";
+    neighborCtx.fillText("Кнопки снизу: ←  ↻  ↓  →", rect.width / 2, rect.height - 164);
+    neighborCtx.font = "900 14px Arial";
+    neighborCtx.fillText("Очисти 12 рядов, чтобы достроить дачу", rect.width / 2, rect.height - 140);
+    neighborCtx.restore();
 }
 
 function drawNeighborGame() {
@@ -1331,23 +1434,26 @@ function drawNeighborGame() {
     const height = rect.height;
 
     drawNeighborBackground(width, height);
-    drawNeighborGoat(neighborGoat.x, neighborGoat.y, neighborGoat.scale, neighborGoat.rotation);
-    drawNeighborText(width, height);
+    drawNeighborBoard();
+    drawNeighborPiece();
+    drawNeighborGrandpa(width, height);
+    drawNeighborHouse(width - 78, height - 128, neighborTetris.buildStage);
+    drawNeighborHud(width, height);
 }
 
 function drawNeighborBackground(width, height) {
     const gradient = neighborCtx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, "#8fd8f7");
-    gradient.addColorStop(0.62, "#b8f7a4");
+    gradient.addColorStop(0.58, "#b8f7a4");
     gradient.addColorStop(1, "#65a30d");
 
     neighborCtx.fillStyle = gradient;
     neighborCtx.fillRect(0, 0, width, height);
 
     neighborCtx.fillStyle = "rgba(255,255,255,.55)";
-    for (let i = 0; i < 5; i++) {
-        const x = (i * 117 + neighborFrame * 0.35) % (width + 130) - 80;
-        const y = 105 + Math.sin((neighborFrame + i * 31) / 34) * 10;
+    for (let i = 0; i < 4; i++) {
+        const x = (i * 145 + neighborFrame * 0.18) % (width + 130) - 80;
+        const y = 118 + Math.sin((neighborFrame + i * 31) / 34) * 8;
         drawNeighborCloud(x, y);
     }
 
@@ -1363,45 +1469,164 @@ function drawNeighborCloud(x, y) {
     neighborCtx.fill();
 }
 
-function drawNeighborGoat(x, y, scale, rotation) {
-    const size = neighborGoat.size * scale;
+function drawNeighborBoard() {
+    const t = neighborTetris;
+    const width = t.cols * t.cell;
+    const height = t.rows * t.cell;
 
     neighborCtx.save();
-    neighborCtx.translate(x, y);
-    neighborCtx.rotate(rotation);
-    neighborCtx.font = `${size}px Arial`;
-    neighborCtx.textAlign = "center";
-    neighborCtx.textBaseline = "middle";
-    neighborCtx.fillText("🐐", 0, 0);
-    neighborCtx.restore();
+    neighborCtx.fillStyle = "rgba(255, 247, 214, .92)";
+    neighborCtx.strokeStyle = "#5b3417";
+    neighborCtx.lineWidth = 5;
+    roundRect(neighborCtx, t.boardX - 8, t.boardY - 8, width + 16, height + 16, 16, true, true);
 
-    neighborCtx.save();
-    neighborCtx.font = "bold 15px Arial";
-    neighborCtx.textAlign = "center";
-    neighborCtx.fillStyle = "#3a1e0c";
-    neighborCtx.strokeStyle = "#fff7d6";
-    neighborCtx.lineWidth = 4;
-    neighborCtx.strokeText(neighborGoatPhrase, x, y - size * 0.65);
-    neighborCtx.fillText(neighborGoatPhrase, x, y - size * 0.65);
+    neighborCtx.fillStyle = "rgba(91, 52, 23, .1)";
+    for (let y = 0; y < t.rows; y++) {
+        for (let x = 0; x < t.cols; x++) {
+            neighborCtx.strokeStyle = "rgba(91,52,23,.16)";
+            neighborCtx.lineWidth = 1;
+            neighborCtx.strokeRect(t.boardX + x * t.cell, t.boardY + y * t.cell, t.cell, t.cell);
+
+            if (t.board[y][x]) {
+                drawNeighborBlock(t.board[y][x], t.boardX + x * t.cell, t.boardY + y * t.cell, t.cell);
+            }
+        }
+    }
+
     neighborCtx.restore();
 }
 
-function drawNeighborText(width, height) {
-    neighborCtx.save();
+function drawNeighborPiece() {
+    const piece = neighborTetris.piece;
+    if (!piece) return;
 
-    neighborCtx.fillStyle = "rgba(255, 247, 214, .92)";
+    piece.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (!value) return;
+            drawNeighborBlock(
+                piece.icon,
+                neighborTetris.boardX + (piece.x + x) * neighborTetris.cell,
+                neighborTetris.boardY + (piece.y + y) * neighborTetris.cell,
+                neighborTetris.cell
+            );
+        });
+    });
+}
+
+function drawNeighborBlock(icon, x, y, size) {
+    neighborCtx.save();
+    neighborCtx.fillStyle = "rgba(255,255,255,.55)";
+    neighborCtx.fillRect(x + 2, y + 2, size - 4, size - 4);
+    neighborCtx.font = `${Math.floor(size * 0.82)}px Arial`;
+    neighborCtx.textAlign = "center";
+    neighborCtx.textBaseline = "middle";
+    neighborCtx.fillText(icon, x + size / 2, y + size / 2 + 1);
+    neighborCtx.restore();
+}
+
+function drawNeighborGrandpa(width, height) {
+    const x = 50;
+    const y = height - 74;
+
+    neighborCtx.save();
+    neighborCtx.font = "54px Arial";
+    neighborCtx.textAlign = "center";
+    neighborCtx.textBaseline = "middle";
+    neighborCtx.fillText("👴", x, y);
+
+    neighborCtx.fillStyle = "#fff7d6";
     neighborCtx.strokeStyle = "#5b3417";
     neighborCtx.lineWidth = 4;
-    roundRect(neighborCtx, 14, height - 88, width - 28, 58, 18, true, true);
+    roundRect(neighborCtx, 16, y - 106, 132, 52, 16, true, true);
 
     neighborCtx.fillStyle = "#3a1e0c";
-    neighborCtx.font = "bold 17px Arial";
-    neighborCtx.textAlign = "left";
-    neighborCtx.fillText(`Осталось: ${neighborTimeLeft} сек`, 30, height - 58);
-    neighborCtx.fillText(`Цель: ${neighborFinishDistance} коз`, width - 142, height - 58);
+    neighborCtx.font = "900 12px Arial";
+    neighborCtx.textAlign = "center";
+    wrapNeighborText(neighborDedPhrase, 82, y - 83, 116, 14);
+    neighborCtx.restore();
+}
 
-    neighborCtx.font = "bold 13px Arial";
-    neighborCtx.fillText("Тапай по козе. Она отскакивает как DVD-логотип.", 30, height - 36);
+function wrapNeighborText(text, x, y, maxWidth, lineHeight) {
+    const words = text.split(" ");
+    let line = "";
+    let currentY = y;
+
+    words.forEach((word) => {
+        const testLine = line ? `${line} ${word}` : word;
+        if (neighborCtx.measureText(testLine).width > maxWidth && line) {
+            neighborCtx.fillText(line, x, currentY);
+            line = word;
+            currentY += lineHeight;
+        } else {
+            line = testLine;
+        }
+    });
+
+    neighborCtx.fillText(line, x, currentY);
+}
+
+function drawNeighborHouse(x, y, stage) {
+    neighborCtx.save();
+    neighborCtx.translate(x, y);
+
+    neighborCtx.fillStyle = "#5b3417";
+    neighborCtx.fillRect(-42, 28, 84, 14);
+
+    if (stage >= 1) {
+        neighborCtx.fillStyle = "#d97706";
+        neighborCtx.fillRect(-36, -8, 72, 42);
+    }
+
+    if (stage >= 2) {
+        neighborCtx.fillStyle = "#7c2d12";
+        neighborCtx.beginPath();
+        neighborCtx.moveTo(-46, -8);
+        neighborCtx.lineTo(0, -44);
+        neighborCtx.lineTo(46, -8);
+        neighborCtx.closePath();
+        neighborCtx.fill();
+    }
+
+    if (stage >= 3) {
+        neighborCtx.fillStyle = "#fde68a";
+        neighborCtx.fillRect(-22, 6, 15, 15);
+        neighborCtx.fillRect(10, 6, 15, 15);
+    }
+
+    if (stage >= 4) {
+        neighborCtx.fillStyle = "#3a1e0c";
+        neighborCtx.fillRect(-6, 10, 16, 24);
+    }
+
+    if (stage >= 5) {
+        neighborCtx.font = "34px Arial";
+        neighborCtx.textAlign = "center";
+        neighborCtx.fillText("🏡", 0, -54);
+    }
+
+    neighborCtx.restore();
+}
+
+function drawNeighborHud(width, height) {
+    neighborCtx.save();
+
+    neighborCtx.fillStyle = "rgba(255, 247, 214, .94)";
+    neighborCtx.strokeStyle = "#5b3417";
+    neighborCtx.lineWidth = 4;
+    roundRect(neighborCtx, 14, height - 92, width - 28, 58, 18, true, true);
+
+    neighborCtx.fillStyle = "#3a1e0c";
+    neighborCtx.font = "900 15px Arial";
+    neighborCtx.textAlign = "left";
+    neighborCtx.fillText(`Ряды: ${neighborTetris.lines}/12`, 30, height - 61);
+    neighborCtx.fillText(`Уровень: ${neighborTetris.level}`, 30, height - 39);
+
+    neighborCtx.textAlign = "right";
+    neighborCtx.fillText(`Очки: ${neighborTetris.score}`, width - 30, height - 61);
+
+    if (neighborNextPiece) {
+        neighborCtx.fillText(`Дальше: ${neighborNextPiece.icon}`, width - 30, height - 39);
+    }
 
     neighborCtx.restore();
 }
@@ -1425,16 +1650,17 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     if (stroke) ctx.stroke();
 }
 
-function checkNeighborCrash() {
-    return false;
-}
-
 function endNeighborGame(isWin) {
     neighborRunning = false;
     cancelAnimationFrame(neighborAnimationId);
 
     if (isWin) {
         neighborWinScreen.classList.remove("hidden");
+        const subtitle = neighborWinScreen.querySelector(".neighbor-subtitle");
+
+        if (subtitle) {
+            subtitle.textContent = `Ряды: ${neighborTetris.lines}. Очки: ${neighborTetris.score}. Дед построил дачу мечты.`;
+        }
         return;
     }
 
@@ -1443,9 +1669,18 @@ function endNeighborGame(isWin) {
     const subtitle = neighborGameOver.querySelector(".neighbor-subtitle");
 
     if (subtitle) {
-        subtitle.textContent = `Поймано: ${neighborDistance}. Рекорд: ${neighborBestDistance}. Коза снова у бабушки.`;
+        subtitle.textContent = `Очки: ${neighborTetris.score}. Рекорд: ${neighborBestDistance}. Дед задумался о втором сарае.`;
     }
 }
+
+function catchNeighborGoat() {
+    return false;
+}
+
+function checkNeighborCrash() {
+    return false;
+}
+
 
 
 

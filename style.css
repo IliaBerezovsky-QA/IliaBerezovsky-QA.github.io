@@ -1159,7 +1159,7 @@ button {
     }
 }
 
-/* NEIGHBOR MODE */
+/* NEIGHBOR TETRIS MODE */
 .neighbor-mode-btn {
     position: absolute;
     left: 24px;
@@ -1185,7 +1185,7 @@ button {
     position: absolute;
     inset: 0;
     z-index: 520;
-    background: linear-gradient(#8fd8f7, #83d6ff 48%, #65a30d 100%);
+    background: linear-gradient(#8fd8f7, #b8f7a4 62%, #65a30d 100%);
     overflow: hidden;
 }
 
@@ -1193,6 +1193,8 @@ button {
     width: 100%;
     height: 100%;
     display: block;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
 .neighbor-top {
@@ -1261,7 +1263,7 @@ button {
 }
 
 .neighbor-subtitle {
-    max-width: 330px;
+    max-width: 340px;
     color: white;
     font-size: 22px;
     line-height: 1.18;
@@ -1357,105 +1359,6 @@ button {
         font-size: 21px;
     }
 }
-
-
-/* RETRO GRAVITY DEFIED MODE */
-.neighbor-mode {
-    background: #9ee7ff;
-}
-
-.neighbor-canvas {
-    image-rendering: pixelated;
-}
-
-.neighbor-score {
-    font-family: monospace;
-    background: #f8fafc;
-    color: #0f172a;
-    border-color: #0f172a;
-    box-shadow: 0 4px 0 #0f172a;
-    text-shadow: none;
-}
-
-.neighbor-title {
-    font-family: Arial, sans-serif;
-    letter-spacing: .5px;
-}
-
-.neighbor-subtitle {
-    max-width: 340px;
-}
-
-.neighbor-control-btn {
-    font-family: monospace;
-    border-color: #0f172a;
-    background: linear-gradient(#f8fafc, #cbd5e1);
-    color: #0f172a;
-    box-shadow: 0 5px 0 #0f172a;
-    text-shadow: none;
-}
-
-.neighbor-gas-btn {
-    background: linear-gradient(#fde68a, #f97316);
-    border-color: #0f172a;
-    color: #0f172a;
-    box-shadow: 0 5px 0 #0f172a;
-}
-
-/* GOAT CATCH MODE */
-.neighbor-controls {
-    display: none !important;
-}
-
-.neighbor-mode {
-    background: linear-gradient(#8fd8f7, #b8f7a4 62%, #65a30d 100%);
-}
-
-.neighbor-canvas {
-    cursor: pointer;
-    touch-action: none;
-    image-rendering: auto;
-}
-
-.neighbor-score {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(#1d8f89, #0f5e58);
-    color: #ffffff;
-    border-color: #07443f;
-    box-shadow: 0 5px 0 #07312e;
-    text-shadow: 2px 2px 0 #00000066;
-}
-
-.neighbor-catch-pop {
-    position: absolute;
-    z-index: 700;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-    color: #fff04a;
-    font-size: 30px;
-    font-weight: 900;
-    -webkit-text-stroke: 2px #6b2c0e;
-    text-shadow: 3px 3px 0 #7c2d12;
-    animation: neighborCatchPop .85s ease-out forwards;
-}
-
-@keyframes neighborCatchPop {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -30%) scale(.7) rotate(-8deg);
-    }
-
-    16% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.08) rotate(4deg);
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -145%) scale(.9) rotate(-5deg);
-    }
-}
-
 
 /* FIX MODES BUTTONS v1.9 */
 .flappy-mode-btn,
