@@ -63,6 +63,7 @@ button {
     width: 100%;
     height: 100%;
     position: relative;
+    overflow: hidden;
 }
 
 .loader.ready .loader-text {
@@ -75,60 +76,45 @@ button {
     transform: translateX(-50%) scale(1);
 }
 
-.paw-track {
+.loader-logo {
     position: absolute;
     left: 50%;
-    top: 43%;
-    width: 140px;
-    height: 240px;
-    transform: translate(-50%, -50%);
-}
+    top: 42%;
+    width: 420px;
+    max-width: 95%;
+    transform: translate(-50%, -50%) scale(.9);
 
-.paw-track span {
-    position: absolute;
-    color: rgba(255,255,255,.9);
-    font-size: 42px;
-    font-weight: 900;
-    font-family: Arial, sans-serif;
     opacity: 0;
-    text-shadow: 0 3px 8px rgba(255,255,255,.35);
-    animation: pawFly 4s ease-in-out forwards;
+    transition: .4s ease;
+
+    z-index: 4;
+    pointer-events: none;
 }
 
-.paw-track span:nth-child(1) {
-    left: 22px;
-    top: 170px;
-    animation-delay: .1s;
+.loader.ready .loader-logo {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
 }
 
-.paw-track span:nth-child(2) {
-    left: 62px;
-    top: 132px;
-    animation-delay: .45s;
+.paw-track {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
 }
 
-.paw-track span:nth-child(3) {
-    left: 26px;
-    top: 94px;
-    animation-delay: .8s;
-}
-
-.paw-track span:nth-child(4) {
-    left: 66px;
-    top: 56px;
-    animation-delay: 1.15s;
-}
-
-.paw-track span:nth-child(5) {
-    left: 30px;
-    top: 18px;
-    animation-delay: 1.5s;
-}
-
-.paw-track span:nth-child(6) {
-    left: 70px;
-    top: -20px;
-    animation-delay: 1.85s;
+.footprint {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    background-image: url("assets/bird-foot.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    filter: drop-shadow(0 3px 2px rgba(0,0,0,.28));
+    animation: footprintLife 2.2s ease-out forwards;
 }
 
 .loader-text {
@@ -142,6 +128,7 @@ button {
     font-weight: 900;
     text-shadow: 3px 3px 0 #00000044;
     animation: loaderTextPulse 1.1s infinite;
+    z-index: 5;
 }
 
 .loader-bar,
@@ -167,6 +154,7 @@ button {
     text-shadow: 3px 3px 0 #00000066;
     cursor: pointer;
     transition: .35s;
+    z-index: 6;
 }
 
 .game {
@@ -237,7 +225,6 @@ button {
     width: 210px;
     z-index: 30;
     text-align: center;
-
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
@@ -502,22 +489,25 @@ button {
     text-shadow: 2px 2px 0 #7f1d1d, 0 8px 20px rgba(0,0,0,.35);
 }
 
-@keyframes pawFly {
+@keyframes footprintLife {
     0% {
         opacity: 0;
-        transform: translateY(38px) rotate(-18deg) scale(.45);
+        transform: translateY(10px) scale(.55) rotate(var(--rotate));
     }
-    20% {
-        opacity: .9;
-        transform: translateY(0) rotate(-18deg) scale(1);
+
+    14% {
+        opacity: .95;
+        transform: translateY(0) scale(1.05) rotate(var(--rotate));
     }
-    65% {
-        opacity: .75;
-        transform: translateY(-18px) rotate(-18deg) scale(.9);
+
+    62% {
+        opacity: .85;
+        transform: translateY(-2px) scale(1) rotate(var(--rotate));
     }
+
     100% {
         opacity: 0;
-        transform: translateY(-42px) rotate(-18deg) scale(.45);
+        transform: translateY(-10px) scale(.72) rotate(var(--rotate));
     }
 }
 

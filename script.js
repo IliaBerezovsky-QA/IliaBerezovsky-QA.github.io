@@ -7,6 +7,8 @@ let fruitPower = 1;
 let totalFruitScore = 0;
 let isLevelUpActive = false;
 let lastTouchEndTime = 0;
+let pawStepIndex = 0;
+let pawWalkTimer = null;
 
 const upgradeCosts = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
 
@@ -26,6 +28,7 @@ const houseNames = [
 const loader = document.getElementById("loader");
 const game = document.getElementById("game");
 const prizesScreen = document.getElementById("prizesScreen");
+const pawTrack = document.getElementById("pawTrack");
 
 const startBtn = document.getElementById("startBtn");
 const backBtn = document.getElementById("backBtn");
@@ -119,13 +122,17 @@ document.addEventListener("touchend", (event) => {
 }, { passive: false });
 
 window.addEventListener("load", () => {
+    startPawWalk();
+
     setTimeout(() => {
-        loader.classList.add("ready");
-    }, 4000);
+    loader.classList.add("ready");
+    stopPawWalk();
+}, 4000);
 });
 
 startBtn.addEventListener("click", () => {
     startMusic();
+    stopPawWalk();
     showGame();
 });
 
@@ -139,9 +146,12 @@ backBtn.addEventListener("click", () => {
     prizesScreen.classList.add("hidden");
     loader.classList.remove("hidden");
 
+    startPawWalk();
+
     setTimeout(() => {
-        loader.classList.add("ready");
-    }, 4000);
+    loader.classList.add("ready");
+    stopPawWalk();
+}, 4000);
 });
 
 prizesBtn.addEventListener("click", () => {
@@ -159,6 +169,67 @@ crow.addEventListener("click", (event) => {
     event.preventDefault();
     hitCrow();
 });
+
+function startPawWalk() {
+    if (!pawTrack || pawWalkTimer) return;
+
+    pawStepIndex = 0;
+    pawTrack.innerHTML = "";
+
+    createFootprint();
+
+    pawWalkTimer = setInterval(() => {
+        createFootprint();
+    }, 260);
+}
+
+function stopPawWalk() {
+    if (pawWalkTimer) {
+        clearInterval(pawWalkTimer);
+        pawWalkTimer = null;
+    }
+
+    if (pawTrack) {
+        pawTrack.innerHTML = "";
+    }
+}
+
+function createFootprint() {
+    if (!pawTrack || loader.classList.contains("hidden") || loader.classList.contains("ready")) return;
+
+    const loaderRect = loader.getBoundingClientRect();
+
+    const centerX = loaderRect.width / 2 - 45;
+    const startY = loaderRect.height * 0.68;
+    const stepY = 34;
+    const sideOffset = 16;
+    const curve = Math.sin(pawStepIndex * 0.75) * 16;
+    const isRightStep = pawStepIndex % 2 === 1;
+
+    const x = centerX + curve + (isRightStep ? sideOffset : -sideOffset) + random(-5, 5);
+    const y = startY - pawStepIndex * stepY + random(-4, 4);
+
+    const footprint = document.createElement("div");
+    footprint.className = "footprint";
+
+    const rotate = isRightStep ? random(8, 18) : random(-18, -8);
+
+    footprint.style.left = `${x}px`;
+    footprint.style.top = `${y}px`;
+    footprint.style.setProperty("--rotate", `${rotate}deg`);
+
+    pawTrack.appendChild(footprint);
+
+    setTimeout(() => {
+        footprint.remove();
+    }, 2200);
+
+    pawStepIndex++;
+
+    if (y < -60) {
+        pawStepIndex = 0;
+    }
+}
 
 function startMusic() {
     if (isMusicStarted) return;

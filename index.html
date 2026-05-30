@@ -8,25 +8,31 @@
 </head>
 <body>
 
+    <!-- Экран загрузки -->
     <div id="loader" class="loader">
         <div class="loader-sky">
-            <div class="paw-track">
-                <span>Y</span>
-                <span>Y</span>
-                <span>Y</span>
-                <span>Y</span>
-                <span>Y</span>
-                <span>Y</span>
-            </div>
+
+            <div id="pawTrack" class="paw-track"></div>
+
+            <img
+                id="loaderLogo"
+                class="loader-logo"
+                src="assets/loader-logo.png"
+                alt="Суета на 6 сотках">
 
             <div class="loader-text">Загрузка...</div>
 
-            <button id="startBtn" class="start-btn" type="button">Играть</button>
+            <button id="startBtn" class="start-btn" type="button">
+                Играть
+            </button>
+
         </div>
     </div>
 
     <div class="app-shell">
+
         <main id="game" class="screen game hidden">
+
             <header class="hud">
                 <button id="backBtn" class="back-btn" type="button">‹</button>
 
@@ -38,6 +44,7 @@
             </header>
 
             <section class="farm">
+
                 <div class="house-zone">
                     <img id="houseImg" class="house-img" src="assets/dom1.png" alt="Дом">
 
@@ -47,7 +54,8 @@
                     </div>
 
                     <div class="house-next">
-                        До улучшения: <span id="nextUpgrade">1000</span>
+                        До улучшения:
+                        <span id="nextUpgrade">1000</span>
                     </div>
                 </div>
 
@@ -55,13 +63,30 @@
                     <img id="crowImg" src="assets/crow.png" alt="Ворона">
                 </button>
 
-                <img id="granny" class="granny-img" src="assets/granny.png" alt="Бабушка">
-                <img id="hitSwipe" class="hit-swipe" src="assets/hit-swipe.png" alt="">
+                <img
+                    id="granny"
+                    class="granny-img"
+                    src="assets/granny.png"
+                    alt="Бабушка">
+
+                <img
+                    id="hitSwipe"
+                    class="hit-swipe"
+                    src="assets/hit-swipe.png"
+                    alt="">
 
                 <div id="levelUpOverlay" class="level-up-overlay hidden">
                     <div class="level-up-glow"></div>
-                    <img id="grannyDance" class="granny-dance" src="assets/granny-dance.png" alt="Бабушка танцует">
-                    <div id="levelUpText" class="level-up-text">Дом вырос!</div>
+
+                    <img
+                        id="grannyDance"
+                        class="granny-dance"
+                        src="assets/granny-dance.png"
+                        alt="Бабушка танцует">
+
+                    <div id="levelUpText" class="level-up-text">
+                        Дом вырос!
+                    </div>
                 </div>
 
                 <button id="prizesBtn" class="prizes-btn" type="button">
@@ -70,27 +95,50 @@
                 </button>
 
                 <div id="effects" class="effects"></div>
+
             </section>
+
         </main>
 
         <main id="prizesScreen" class="screen prizes-screen hidden">
-            <button id="prizesBackBtn" class="back-btn prizes-back" type="button">‹</button>
+
+            <button
+                id="prizesBackBtn"
+                class="back-btn prizes-back"
+                type="button">
+                ‹
+            </button>
 
             <div class="prizes-content">
+
                 <h1>
                     А призы под елочкой<br>
                     на Новый год... 🫵🏻😎
                 </h1>
 
-                <video class="mem-video" autoplay muted loop playsinline>
-                    <source src="assets/mem.webm" type="video/webm">
+                <video
+                    class="mem-video"
+                    autoplay
+                    muted
+                    loop
+                    playsinline>
+
+                    <source
+                        src="assets/mem.webm"
+                        type="video/webm">
                 </video>
 
-                <p class="prizes-bottom-text">или нет?</p>
+                <p class="prizes-bottom-text">
+                    или нет?
+                </p>
+
             </div>
+
         </main>
+
     </div>
 
     <script src="script.js"></script>
+
 </body>
 </html>
