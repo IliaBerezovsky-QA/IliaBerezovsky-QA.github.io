@@ -1158,3 +1158,350 @@ button {
         padding: 9px 11px;
     }
 }
+
+/* NEIGHBOR MODE */
+.neighbor-mode-btn {
+    position: absolute;
+    left: 24px;
+    top: 86px;
+    z-index: 70;
+
+    width: 58px;
+    height: 58px;
+
+    border: 5px solid #07443f;
+    border-radius: 18px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+
+    color: white;
+    font-size: 30px;
+    font-weight: 900;
+
+    box-shadow: 0 5px 0 #07312e;
+    cursor: pointer;
+}
+
+.neighbor-mode {
+    position: absolute;
+    inset: 0;
+    z-index: 520;
+    background: linear-gradient(#8fd8f7, #83d6ff 48%, #65a30d 100%);
+    overflow: hidden;
+}
+
+.neighbor-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.neighbor-top {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    z-index: 620;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.neighbor-back-btn {
+    width: 54px;
+    height: 54px;
+    border: 4px solid #07443f;
+    border-radius: 16px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    color: white;
+    font-size: 46px;
+    line-height: 34px;
+    font-weight: 900;
+    box-shadow: 0 5px 0 #07312e;
+    text-shadow: 2px 2px 0 #00000066;
+    cursor: pointer;
+}
+
+.neighbor-score {
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    border: 3px solid #07443f;
+    box-shadow: 0 5px 0 #07312e;
+    color: white;
+    font-size: 18px;
+    font-weight: 900;
+    text-shadow: 2px 2px 0 #00000066;
+}
+
+.neighbor-start-screen,
+.neighbor-game-over {
+    position: absolute;
+    inset: 0;
+    z-index: 610;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 26px;
+    text-align: center;
+    background: rgba(2, 6, 23, .35);
+    backdrop-filter: blur(3px);
+    pointer-events: none;
+}
+
+.neighbor-title {
+    color: #fff04a;
+    font-size: 36px;
+    line-height: 1.05;
+    font-weight: 900;
+    -webkit-text-stroke: 2px #7c2d12;
+    text-shadow: 4px 4px 0 #3a1e0c, 0 8px 25px rgba(0,0,0,.45);
+    margin-bottom: 14px;
+}
+
+.neighbor-subtitle {
+    max-width: 330px;
+    color: white;
+    font-size: 22px;
+    line-height: 1.18;
+    font-weight: 900;
+    text-shadow: 2px 2px 0 #00000066;
+    margin-bottom: 28px;
+}
+
+.neighbor-start-btn {
+    min-width: 210px;
+    height: 72px;
+    border: 5px solid #8b4513;
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 900;
+    box-shadow:
+        inset 0 3px 0 rgba(255,255,255,.65),
+        inset 0 -5px 0 rgba(154,69,16,.35),
+        0 8px 0 #6f320e,
+        0 18px 28px rgba(0,0,0,.28);
+    text-shadow:
+        0 2px 0 rgba(124,45,18,.95),
+        0 4px 8px rgba(0,0,0,.35);
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.neighbor-controls {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 600;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.3fr 1fr;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.neighbor-control-btn {
+    height: 58px;
+    border: 4px solid #07443f;
+    border-radius: 18px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    color: white;
+    font-size: 24px;
+    font-weight: 900;
+    box-shadow: 0 5px 0 #07312e;
+    text-shadow: 2px 2px 0 #00000066;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.neighbor-gas-btn {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+    border-color: #8b4513;
+    box-shadow: 0 5px 0 #6f320e;
+}
+
+.neighbor-start-btn:active,
+.neighbor-mode-btn:active,
+.neighbor-back-btn:active,
+.neighbor-control-btn:active {
+    transform: scale(.96);
+    filter: brightness(.95);
+}
+
+@media (max-width: 390px) {
+    .neighbor-mode-btn {
+        left: 18px;
+        top: 78px;
+        width: 54px;
+        height: 54px;
+        font-size: 28px;
+    }
+
+    .neighbor-title {
+        font-size: 32px;
+    }
+
+    .neighbor-subtitle {
+        font-size: 20px;
+    }
+
+    .neighbor-control-btn {
+        height: 54px;
+        font-size: 21px;
+    }
+}
+
+
+/* RETRO GRAVITY DEFIED MODE */
+.neighbor-mode {
+    background: #9ee7ff;
+}
+
+.neighbor-canvas {
+    image-rendering: pixelated;
+}
+
+.neighbor-score {
+    font-family: monospace;
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #0f172a;
+    box-shadow: 0 4px 0 #0f172a;
+    text-shadow: none;
+}
+
+.neighbor-title {
+    font-family: Arial, sans-serif;
+    letter-spacing: .5px;
+}
+
+.neighbor-subtitle {
+    max-width: 340px;
+}
+
+.neighbor-control-btn {
+    font-family: monospace;
+    border-color: #0f172a;
+    background: linear-gradient(#f8fafc, #cbd5e1);
+    color: #0f172a;
+    box-shadow: 0 5px 0 #0f172a;
+    text-shadow: none;
+}
+
+.neighbor-gas-btn {
+    background: linear-gradient(#fde68a, #f97316);
+    border-color: #0f172a;
+    color: #0f172a;
+    box-shadow: 0 5px 0 #0f172a;
+}
+
+/* GOAT CATCH MODE */
+.neighbor-controls {
+    display: none !important;
+}
+
+.neighbor-mode {
+    background: linear-gradient(#8fd8f7, #b8f7a4 62%, #65a30d 100%);
+}
+
+.neighbor-canvas {
+    cursor: pointer;
+    touch-action: none;
+    image-rendering: auto;
+}
+
+.neighbor-score {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    color: #ffffff;
+    border-color: #07443f;
+    box-shadow: 0 5px 0 #07312e;
+    text-shadow: 2px 2px 0 #00000066;
+}
+
+.neighbor-catch-pop {
+    position: absolute;
+    z-index: 700;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    color: #fff04a;
+    font-size: 30px;
+    font-weight: 900;
+    -webkit-text-stroke: 2px #6b2c0e;
+    text-shadow: 3px 3px 0 #7c2d12;
+    animation: neighborCatchPop .85s ease-out forwards;
+}
+
+@keyframes neighborCatchPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -30%) scale(.7) rotate(-8deg);
+    }
+
+    16% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08) rotate(4deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -145%) scale(.9) rotate(-5deg);
+    }
+}
+
+
+/* FIX MODES BUTTONS v1.9 */
+.flappy-mode-btn,
+.neighbor-mode-btn {
+    pointer-events: auto !important;
+    z-index: 260 !important;
+}
+
+.flappy-mode-btn {
+    left: 22px !important;
+    top: 18px !important;
+}
+
+.neighbor-mode-btn {
+    left: 22px !important;
+    top: 86px !important;
+}
+
+.flappy-top,
+.neighbor-top {
+    z-index: 900 !important;
+    pointer-events: auto !important;
+}
+
+.flappy-back-btn,
+.neighbor-back-btn,
+.flappy-start-btn,
+.neighbor-start-btn {
+    pointer-events: auto !important;
+}
+
+.flappy-start-screen,
+.flappy-game-over,
+.neighbor-start-screen,
+.neighbor-game-over {
+    pointer-events: none !important;
+}
+
+@media (max-width: 390px) {
+    .flappy-mode-btn {
+        left: 18px !important;
+        top: 14px !important;
+    }
+
+    .neighbor-mode-btn {
+        left: 18px !important;
+        top: 78px !important;
+    }
+}

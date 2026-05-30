@@ -65,6 +65,22 @@ const flappyStartScreen = document.getElementById("flappyStartScreen");
 const flappyStartBtn = document.getElementById("flappyStartBtn");
 const flappyGameOver = document.getElementById("flappyGameOver");
 const flappyRestartBtn = document.getElementById("flappyRestartBtn");
+
+const neighborModeBtn = document.getElementById("neighborModeBtn");
+const neighborMode = document.getElementById("neighborMode");
+const neighborBackBtn = document.getElementById("neighborBackBtn");
+const neighborCanvas = document.getElementById("neighborCanvas");
+const neighborDistanceText = document.getElementById("neighborDistance");
+const neighborStartScreen = document.getElementById("neighborStartScreen");
+const neighborStartBtn = document.getElementById("neighborStartBtn");
+const neighborGameOver = document.getElementById("neighborGameOver");
+const neighborRestartBtn = document.getElementById("neighborRestartBtn");
+const neighborWinScreen = document.getElementById("neighborWinScreen");
+const neighborWinRestartBtn = document.getElementById("neighborWinRestartBtn");
+const neighborGasBtn = document.getElementById("neighborGasBtn");
+const neighborBrakeBtn = document.getElementById("neighborBrakeBtn");
+const neighborLeanBackBtn = document.getElementById("neighborLeanBackBtn");
+const neighborLeanForwardBtn = document.getElementById("neighborLeanForwardBtn");
 const prizesBtn = document.getElementById("prizesBtn");
 const prizesBackBtn = document.getElementById("prizesBackBtn");
 
@@ -138,6 +154,46 @@ let flappyScore = 0;
 let flappyFrame = 0;
 let flappyBestScore = 0;
 
+/* NEIGHBOR GOAT CATCH */
+
+let neighborCtx = neighborCanvas ? neighborCanvas.getContext("2d") : null;
+let neighborAnimationId = null;
+let neighborRunning = false;
+let neighborDistance = 0;
+let neighborBestDistance = 0;
+let neighborFinishDistance = 30;
+let neighborFrame = 0;
+let neighborTimeLeft = 30;
+let neighborTimerStartedAt = 0;
+let neighborGoatPhrase = "Меее!";
+
+const neighborControls = {
+    gas: false,
+    brake: false,
+    leanBack: false,
+    leanForward: false
+};
+
+const neighborGoat = {
+    x: 160,
+    y: 260,
+    vx: 4.8,
+    vy: 4.2,
+    size: 62,
+    scale: 1,
+    rotation: 0
+};
+
+const neighborGoatPhrases = [
+    "Меее!",
+    "Не поймаешь!",
+    "Я к бабушке!",
+    "Сосед, отстань!",
+    "Меее-ракета!",
+    "Бабушка лучше!",
+    "Коза в домике!",
+    "Минус репутация соседа!"
+];
 
 const crowPhrases = [
     "Одумайся!!!",
@@ -246,6 +302,8 @@ backBtn.addEventListener("click", () => {
     newspaperModal.classList.add("hidden");
     stopFlappyGame();
     if (flappyMode) flappyMode.classList.add("hidden");
+    stopNeighborGame();
+    if (neighborMode) neighborMode.classList.add("hidden");
     loader.classList.remove("hidden");
 
     isLevelUpActive = false;
@@ -312,6 +370,66 @@ if (flappyCanvas) {
         event.preventDefault();
         flappyFlap();
     }, { passive: false });
+}
+
+if (neighborModeBtn) {
+    neighborModeBtn.addEventListener("click", () => {
+        openNeighborMode();
+    });
+}
+
+if (neighborBackBtn) {
+    neighborBackBtn.addEventListener("click", () => {
+        closeNeighborMode();
+    });
+}
+
+if (neighborStartBtn) {
+    neighborStartBtn.addEventListener("click", () => {
+        startNeighborGame();
+    });
+}
+
+if (neighborRestartBtn) {
+    neighborRestartBtn.addEventListener("click", () => {
+        startNeighborGame();
+    });
+}
+
+if (neighborWinRestartBtn) {
+    neighborWinRestartBtn.addEventListener("click", () => {
+        startNeighborGame();
+    });
+}
+
+setupNeighborControlButton(neighborGasBtn, "gas");
+setupNeighborControlButton(neighborBrakeBtn, "brake");
+setupNeighborControlButton(neighborLeanBackBtn, "leanBack");
+setupNeighborControlButton(neighborLeanForwardBtn, "leanForward");
+
+if (neighborCanvas) {
+    neighborCanvas.addEventListener("pointerdown", (event) => {
+        if (!neighborRunning) return;
+
+        const rect = neighborCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+
+        if (x < rect.width * 0.45) {
+            neighborControls.leanBack = true;
+        } else {
+            neighborControls.gas = true;
+        }
+    });
+
+    neighborCanvas.addEventListener("pointerup", () => {
+        neighborControls.gas = false;
+        neighborControls.leanBack = false;
+    });
+
+    neighborCanvas.addEventListener("pointercancel", () => {
+        neighborControls.gas = false;
+        neighborControls.leanBack = false;
+    });
 }
 
 
@@ -429,6 +547,8 @@ function showOnboarding() {
     newspaperDelivery.classList.add("hidden");
     newspaperModal.classList.add("hidden");
     if (flappyMode) flappyMode.classList.add("hidden");
+    stopNeighborGame();
+    if (neighborMode) neighborMode.classList.add("hidden");
 
     onboardingStep = 0;
     onboardingImage.src = onboardingSlides[onboardingStep];
@@ -725,10 +845,12 @@ function random(min, max) {
 }
 
 
+
 function openFlappyMode() {
     if (!flappyMode || !flappyCanvas) return;
 
     startMusic();
+    closeNeighborMode();
 
     flappyMode.classList.remove("hidden");
     flappyStartScreen.classList.remove("hidden");
@@ -764,14 +886,12 @@ function resizeFlappyCanvas() {
 }
 
 function startFlappyGame() {
-    if (!flappyCanvas) return;
+    if (!flappyCanvas || !flappyMode) return;
 
     resizeFlappyCanvas();
 
-    const rect = flappyMode.getBoundingClientRect();
-
     flappyRunning = true;
-    flappyBirdY = rect.height / 2;
+    flappyBirdY = flappyMode.getBoundingClientRect().height / 2;
     flappyVelocity = 0;
     flappyPipes = [];
     flappyScore = 0;
@@ -823,14 +943,16 @@ function flappyLoop() {
 }
 
 function createFlappyPipe() {
+    if (!flappyMode) return;
+
     const rect = flappyMode.getBoundingClientRect();
-    const gap = Math.max(158, Math.min(188, rect.height * 0.24));
-    const minTop = 86;
-    const maxTop = Math.max(minTop + 20, rect.height - gap - 118);
-    const topHeight = random(minTop, maxTop);
+    const gap = Math.max(150, Math.min(190, rect.height * 0.23));
+    const minTop = 90;
+    const maxTop = Math.max(minTop + 20, rect.height - gap - 125);
+    const topHeight = random(minTop, Math.floor(maxTop));
 
     flappyPipes.push({
-        x: rect.width + 40,
+        x: rect.width + 45,
         topHeight,
         gap,
         width: 74,
@@ -850,7 +972,7 @@ function updateFlappyPipes() {
         }
     });
 
-    flappyPipes = flappyPipes.filter((pipe) => pipe.x + pipe.width > -60);
+    flappyPipes = flappyPipes.filter((pipe) => pipe.x + pipe.width > -50);
 }
 
 function drawFlappyIntro() {
@@ -859,8 +981,13 @@ function drawFlappyIntro() {
     const rect = flappyMode.getBoundingClientRect();
     drawFlappyBackground(rect.width, rect.height);
 
-    flappyCtx.font = "46px Arial";
-    flappyCtx.fillText("🐦", 68, rect.height / 2);
+    flappyCtx.font = "52px Arial";
+    flappyCtx.textAlign = "center";
+    flappyCtx.fillText("🐦", rect.width / 2, rect.height / 2 - 86);
+
+    flappyCtx.fillStyle = "rgba(255,255,255,.75)";
+    flappyCtx.font = "900 18px Arial";
+    flappyCtx.fillText("Тапай по экрану, чтобы лететь", rect.width / 2, rect.height / 2 + 126);
 }
 
 function drawFlappyGame() {
@@ -870,72 +997,64 @@ function drawFlappyGame() {
     const width = rect.width;
     const height = rect.height;
 
+    flappyCtx.clearRect(0, 0, width, height);
     drawFlappyBackground(width, height);
 
     flappyPipes.forEach((pipe) => {
-        drawFlappyObstacle(pipe.x, 0, pipe.width, pipe.topHeight);
-        drawFlappyObstacle(pipe.x, pipe.topHeight + pipe.gap, pipe.width, height - pipe.topHeight - pipe.gap);
+        drawFlappyObstacle(pipe.x, 0, pipe.width, pipe.topHeight, true);
+        drawFlappyObstacle(pipe.x, pipe.topHeight + pipe.gap, pipe.width, height - pipe.topHeight - pipe.gap, false);
     });
 
     flappyCtx.save();
-    flappyCtx.font = "44px Arial";
-    flappyCtx.translate(78, flappyBirdY);
-    flappyCtx.rotate(Math.max(-0.35, Math.min(0.45, flappyVelocity / 14)));
-    flappyCtx.fillText("🐦", -22, 16);
+    flappyCtx.translate(82, flappyBirdY);
+    flappyCtx.rotate(Math.max(-0.55, Math.min(0.75, flappyVelocity * 0.06)));
+    flappyCtx.font = "46px Arial";
+    flappyCtx.textAlign = "center";
+    flappyCtx.textBaseline = "middle";
+    flappyCtx.fillText("🐦", 0, 0);
     flappyCtx.restore();
-
-    flappyCtx.font = "24px Arial";
-    flappyCtx.fillText("🌱", 18, height - 26);
-    flappyCtx.fillText("🌻", width - 56, height - 34);
 }
 
 function drawFlappyBackground(width, height) {
     const skyGradient = flappyCtx.createLinearGradient(0, 0, 0, height);
     skyGradient.addColorStop(0, "#8fd8f7");
-    skyGradient.addColorStop(0.58, "#93e2ff");
-    skyGradient.addColorStop(1, "#65a30d");
+    skyGradient.addColorStop(0.62, "#65c7f7");
+    skyGradient.addColorStop(1, "#4ade80");
 
     flappyCtx.fillStyle = skyGradient;
     flappyCtx.fillRect(0, 0, width, height);
 
-    flappyCtx.fillStyle = "rgba(255,255,255,.8)";
+    flappyCtx.fillStyle = "rgba(255,255,255,.55)";
     flappyCtx.beginPath();
-    flappyCtx.arc(78, 108, 28, 0, Math.PI * 2);
-    flappyCtx.arc(108, 104, 36, 0, Math.PI * 2);
-    flappyCtx.arc(142, 110, 25, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.18, 120, 24, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.25, 118, 34, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.34, 124, 22, 0, Math.PI * 2);
     flappyCtx.fill();
 
     flappyCtx.beginPath();
-    flappyCtx.arc(width - 120, 168, 24, 0, Math.PI * 2);
-    flappyCtx.arc(width - 92, 164, 32, 0, Math.PI * 2);
-    flappyCtx.arc(width - 60, 170, 23, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.68, 180, 20, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.75, 178, 28, 0, Math.PI * 2);
+    flappyCtx.arc(width * 0.83, 184, 18, 0, Math.PI * 2);
     flappyCtx.fill();
-
-    flappyCtx.fillStyle = "rgba(91,52,23,.25)";
-    flappyCtx.fillRect(0, height - 44, width, 44);
 }
 
-function drawFlappyObstacle(x, y, width, height) {
-    if (height <= 0) return;
-
-    const gradient = flappyCtx.createLinearGradient(x, y, x + width, y);
-    gradient.addColorStop(0, "#7c3f18");
-    gradient.addColorStop(0.45, "#5b3417");
-    gradient.addColorStop(1, "#3a1e0c");
-
-    flappyCtx.fillStyle = gradient;
+function drawFlappyObstacle(x, y, width, height, isTop) {
+    flappyCtx.fillStyle = "#5b3417";
     flappyCtx.fillRect(x, y, width, height);
 
     flappyCtx.fillStyle = "#3a1e0c";
-    flappyCtx.fillRect(x - 7, y + height - 18, width + 14, 18);
 
-    flappyCtx.fillStyle = "rgba(255,255,255,.16)";
-    flappyCtx.fillRect(x + 10, y + 8, 9, Math.max(0, height - 16));
+    if (isTop) {
+        flappyCtx.fillRect(x - 8, y + height - 20, width + 16, 20);
+    } else {
+        flappyCtx.fillRect(x - 8, y, width + 16, 20);
+    }
 
     flappyCtx.font = "28px Arial";
+    flappyCtx.textAlign = "center";
 
-    for (let i = y + 44; i < y + height - 18; i += 58) {
-        flappyCtx.fillText("🪚", x + 14, i);
+    for (let i = y + 42; i < y + height - 20; i += 58) {
+        flappyCtx.fillText("🪵", x + width / 2, i);
     }
 }
 
@@ -943,24 +1062,18 @@ function checkFlappyCollision() {
     if (!flappyMode) return false;
 
     const rect = flappyMode.getBoundingClientRect();
+    const birdX = 82;
+    const birdY = flappyBirdY;
+    const radius = 22;
 
-    const birdX = 63;
-    const birdY = flappyBirdY - 30;
-    const birdWidth = 42;
-    const birdHeight = 42;
-
-    if (birdY < 0 || birdY + birdHeight > rect.height - 44) {
+    if (birdY - radius < 0 || birdY + radius > rect.height) {
         return true;
     }
 
     return flappyPipes.some((pipe) => {
-        const inPipeX =
-            birdX + birdWidth > pipe.x &&
-            birdX < pipe.x + pipe.width;
-
-        const hitTop = birdY < pipe.topHeight;
-        const hitBottom = birdY + birdHeight > pipe.topHeight + pipe.gap;
-
+        const inPipeX = birdX + radius > pipe.x && birdX - radius < pipe.x + pipe.width;
+        const hitTop = birdY - radius < pipe.topHeight;
+        const hitBottom = birdY + radius > pipe.topHeight + pipe.gap;
         return inPipeX && (hitTop || hitBottom);
     });
 }
@@ -969,22 +1082,398 @@ function endFlappyGame() {
     flappyRunning = false;
     cancelAnimationFrame(flappyAnimationId);
 
-    flappyGameOver.classList.remove("hidden");
+    if (flappyGameOver) {
+        flappyGameOver.classList.remove("hidden");
+        const subtitle = flappyGameOver.querySelector(".flappy-subtitle");
 
-    const subtitle = flappyGameOver.querySelector(".flappy-subtitle");
-
-    if (subtitle) {
-        subtitle.textContent = `Уклонений: ${flappyScore}. Рекорд: ${flappyBestScore}. Лариса требует реванш.`;
+        if (subtitle) {
+            subtitle.textContent = `Уклонений: ${flappyScore}. Рекорд: ${flappyBestScore}. Лариса требует реванш.`;
+        }
     }
 }
 
-window.addEventListener("resize", () => {
-    if (flappyMode && !flappyMode.classList.contains("hidden")) {
-        resizeFlappyCanvas();
 
-        if (!flappyRunning) {
-            drawFlappyIntro();
-        }
+function setupNeighborControlButton(button, controlName) {
+    if (!button) return;
+
+    button.addEventListener("click", (event) => {
+        event.preventDefault();
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+    });
+}
+
+function openNeighborMode() {
+    if (!neighborMode || !neighborCanvas) return;
+
+    startMusic();
+    closeFlappyMode();
+
+    neighborMode.classList.remove("hidden");
+    neighborStartScreen.classList.remove("hidden");
+    neighborGameOver.classList.add("hidden");
+    neighborWinScreen.classList.add("hidden");
+
+    resizeNeighborCanvas();
+    stopNeighborGame();
+    drawNeighborIntro();
+}
+
+function closeNeighborMode() {
+    stopNeighborGame();
+
+    if (neighborMode) {
+        neighborMode.classList.add("hidden");
+    }
+}
+
+function resizeNeighborCanvas() {
+    if (!neighborMode || !neighborCanvas) return;
+
+    const rect = neighborMode.getBoundingClientRect();
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    neighborCanvas.width = Math.floor(rect.width * pixelRatio);
+    neighborCanvas.height = Math.floor(rect.height * pixelRatio);
+
+    neighborCanvas.style.width = `${rect.width}px`;
+    neighborCanvas.style.height = `${rect.height}px`;
+
+    neighborCtx = neighborCanvas.getContext("2d");
+    neighborCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    neighborCtx.imageSmoothingEnabled = false;
+}
+
+function startNeighborGame() {
+    if (!neighborCanvas || !neighborMode) return;
+
+    resizeNeighborCanvas();
+
+    neighborRunning = true;
+    neighborDistance = 0;
+    neighborFrame = 0;
+    neighborFinishDistance = 30;
+    neighborTimeLeft = 30;
+    neighborTimerStartedAt = Date.now();
+    neighborGoatPhrase = "Меее!";
+
+    resetNeighborGoat();
+
+    neighborDistanceText.textContent = "0";
+    neighborStartScreen.classList.add("hidden");
+    neighborGameOver.classList.add("hidden");
+    neighborWinScreen.classList.add("hidden");
+
+    cancelAnimationFrame(neighborAnimationId);
+    neighborLoop();
+}
+
+function resetNeighborGoat() {
+    if (!neighborMode) return;
+
+    const rect = neighborMode.getBoundingClientRect();
+
+    neighborGoat.size = Math.max(54, Math.min(72, rect.width * 0.15));
+    neighborGoat.x = rect.width * 0.5;
+    neighborGoat.y = rect.height * 0.48;
+    neighborGoat.vx = getRandomGoatSpeed();
+    neighborGoat.vy = getRandomGoatSpeed();
+    neighborGoat.scale = 1;
+    neighborGoat.rotation = 0;
+}
+
+function getRandomGoatSpeed() {
+    const speed = random(42, 58) / 10;
+    return Math.random() > 0.5 ? speed : -speed;
+}
+
+function stopNeighborGame() {
+    neighborRunning = false;
+
+    if (neighborAnimationId) {
+        cancelAnimationFrame(neighborAnimationId);
+        neighborAnimationId = null;
+    }
+
+    neighborControls.gas = false;
+    neighborControls.brake = false;
+    neighborControls.leanBack = false;
+    neighborControls.leanForward = false;
+}
+
+function neighborLoop() {
+    if (!neighborRunning) return;
+
+    updateNeighborGoat();
+    drawNeighborGame();
+
+    if (neighborTimeLeft <= 0) {
+        endNeighborGame(false);
+        return;
+    }
+
+    if (neighborDistance >= neighborFinishDistance) {
+        endNeighborGame(true);
+        return;
+    }
+
+    neighborAnimationId = requestAnimationFrame(neighborLoop);
+}
+
+function updateNeighborGoat() {
+    if (!neighborMode) return;
+
+    const rect = neighborMode.getBoundingClientRect();
+    const goat = neighborGoat;
+
+    neighborFrame++;
+    neighborTimeLeft = Math.max(0, 30 - Math.floor((Date.now() - neighborTimerStartedAt) / 1000));
+
+    goat.x += goat.vx;
+    goat.y += goat.vy;
+    goat.rotation += 0.055 * Math.sign(goat.vx || 1);
+
+    const margin = goat.size * 0.55;
+    const topLimit = 86 + margin;
+    const bottomLimit = rect.height - margin - 18;
+    const leftLimit = margin;
+    const rightLimit = rect.width - margin;
+
+    if (goat.x < leftLimit) {
+        goat.x = leftLimit;
+        goat.vx = Math.abs(goat.vx) + 0.12;
+        goat.vy += random(-8, 8) / 10;
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+    }
+
+    if (goat.x > rightLimit) {
+        goat.x = rightLimit;
+        goat.vx = -Math.abs(goat.vx) - 0.12;
+        goat.vy += random(-8, 8) / 10;
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+    }
+
+    if (goat.y < topLimit) {
+        goat.y = topLimit;
+        goat.vy = Math.abs(goat.vy) + 0.12;
+        goat.vx += random(-8, 8) / 10;
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+    }
+
+    if (goat.y > bottomLimit) {
+        goat.y = bottomLimit;
+        goat.vy = -Math.abs(goat.vy) - 0.12;
+        goat.vx += random(-8, 8) / 10;
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+    }
+
+    const maxSpeed = 8.6;
+    goat.vx = Math.max(-maxSpeed, Math.min(maxSpeed, goat.vx));
+    goat.vy = Math.max(-maxSpeed, Math.min(maxSpeed, goat.vy));
+
+    goat.scale += (1 - goat.scale) * 0.16;
+}
+
+function catchNeighborGoat(clientX, clientY) {
+    if (!neighborRunning || !neighborCanvas) return;
+
+    const rect = neighborCanvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const goat = neighborGoat;
+
+    const dx = x - goat.x;
+    const dy = y - goat.y;
+    const catchRadius = goat.size * 0.68;
+
+    if (Math.sqrt(dx * dx + dy * dy) <= catchRadius) {
+        neighborDistance++;
+        neighborBestDistance = Math.max(neighborBestDistance, neighborDistance);
+        neighborDistanceText.textContent = neighborDistance;
+
+        goat.scale = 1.36;
+        goat.vx = getRandomGoatSpeed() * (1 + neighborDistance * 0.018);
+        goat.vy = getRandomGoatSpeed() * (1 + neighborDistance * 0.018);
+        goat.x = random(Math.floor(catchRadius), Math.floor(rect.width - catchRadius));
+        goat.y = random(Math.floor(118), Math.floor(rect.height - catchRadius - 24));
+        neighborGoatPhrase = getRandomItem(neighborGoatPhrases);
+
+        createNeighborCatchText(x, y);
+    }
+}
+
+function createNeighborCatchText(x, y) {
+    const text = document.createElement("div");
+    text.className = "neighbor-catch-pop";
+    text.textContent = "+1 коза";
+    text.style.left = `${x}px`;
+    text.style.top = `${y}px`;
+
+    if (neighborMode) {
+        neighborMode.appendChild(text);
+        setTimeout(() => text.remove(), 850);
+    }
+}
+
+function drawNeighborIntro() {
+    if (!neighborCtx || !neighborMode) return;
+
+    const rect = neighborMode.getBoundingClientRect();
+    drawNeighborBackground(rect.width, rect.height);
+    drawNeighborGoat(rect.width * 0.5, rect.height * 0.48, 1, 0);
+    drawNeighborText(rect.width, rect.height);
+}
+
+function drawNeighborGame() {
+    if (!neighborCtx || !neighborMode) return;
+
+    const rect = neighborMode.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    drawNeighborBackground(width, height);
+    drawNeighborGoat(neighborGoat.x, neighborGoat.y, neighborGoat.scale, neighborGoat.rotation);
+    drawNeighborText(width, height);
+}
+
+function drawNeighborBackground(width, height) {
+    const gradient = neighborCtx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#8fd8f7");
+    gradient.addColorStop(0.62, "#b8f7a4");
+    gradient.addColorStop(1, "#65a30d");
+
+    neighborCtx.fillStyle = gradient;
+    neighborCtx.fillRect(0, 0, width, height);
+
+    neighborCtx.fillStyle = "rgba(255,255,255,.55)";
+    for (let i = 0; i < 5; i++) {
+        const x = (i * 117 + neighborFrame * 0.35) % (width + 130) - 80;
+        const y = 105 + Math.sin((neighborFrame + i * 31) / 34) * 10;
+        drawNeighborCloud(x, y);
+    }
+
+    neighborCtx.fillStyle = "rgba(91,52,23,.9)";
+    neighborCtx.fillRect(0, height - 22, width, 22);
+}
+
+function drawNeighborCloud(x, y) {
+    neighborCtx.beginPath();
+    neighborCtx.arc(x, y, 18, 0, Math.PI * 2);
+    neighborCtx.arc(x + 22, y - 6, 23, 0, Math.PI * 2);
+    neighborCtx.arc(x + 48, y, 18, 0, Math.PI * 2);
+    neighborCtx.fill();
+}
+
+function drawNeighborGoat(x, y, scale, rotation) {
+    const size = neighborGoat.size * scale;
+
+    neighborCtx.save();
+    neighborCtx.translate(x, y);
+    neighborCtx.rotate(rotation);
+    neighborCtx.font = `${size}px Arial`;
+    neighborCtx.textAlign = "center";
+    neighborCtx.textBaseline = "middle";
+    neighborCtx.fillText("🐐", 0, 0);
+    neighborCtx.restore();
+
+    neighborCtx.save();
+    neighborCtx.font = "bold 15px Arial";
+    neighborCtx.textAlign = "center";
+    neighborCtx.fillStyle = "#3a1e0c";
+    neighborCtx.strokeStyle = "#fff7d6";
+    neighborCtx.lineWidth = 4;
+    neighborCtx.strokeText(neighborGoatPhrase, x, y - size * 0.65);
+    neighborCtx.fillText(neighborGoatPhrase, x, y - size * 0.65);
+    neighborCtx.restore();
+}
+
+function drawNeighborText(width, height) {
+    neighborCtx.save();
+
+    neighborCtx.fillStyle = "rgba(255, 247, 214, .92)";
+    neighborCtx.strokeStyle = "#5b3417";
+    neighborCtx.lineWidth = 4;
+    roundRect(neighborCtx, 14, height - 88, width - 28, 58, 18, true, true);
+
+    neighborCtx.fillStyle = "#3a1e0c";
+    neighborCtx.font = "bold 17px Arial";
+    neighborCtx.textAlign = "left";
+    neighborCtx.fillText(`Осталось: ${neighborTimeLeft} сек`, 30, height - 58);
+    neighborCtx.fillText(`Цель: ${neighborFinishDistance} коз`, width - 142, height - 58);
+
+    neighborCtx.font = "bold 13px Arial";
+    neighborCtx.fillText("Тапай по козе. Она отскакивает как DVD-логотип.", 30, height - 36);
+
+    neighborCtx.restore();
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    const r = Math.min(radius, width / 2, height / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+function checkNeighborCrash() {
+    return false;
+}
+
+function endNeighborGame(isWin) {
+    neighborRunning = false;
+    cancelAnimationFrame(neighborAnimationId);
+
+    if (isWin) {
+        neighborWinScreen.classList.remove("hidden");
+        return;
+    }
+
+    neighborGameOver.classList.remove("hidden");
+
+    const subtitle = neighborGameOver.querySelector(".neighbor-subtitle");
+
+    if (subtitle) {
+        subtitle.textContent = `Поймано: ${neighborDistance}. Рекорд: ${neighborBestDistance}. Коза снова у бабушки.`;
+    }
+}
+
+
+
+/* FIX MODES OPEN/CLOSE v1.9 */
+document.addEventListener("click", (event) => {
+    const flappyButton = event.target.closest("#flappyModeBtn");
+    const neighborButton = event.target.closest("#neighborModeBtn");
+    const flappyBackButton = event.target.closest("#flappyBackBtn");
+    const neighborBackButton = event.target.closest("#neighborBackBtn");
+
+    if (flappyButton) {
+        event.preventDefault();
+        openFlappyMode();
+    }
+
+    if (neighborButton) {
+        event.preventDefault();
+        openNeighborMode();
+    }
+
+    if (flappyBackButton) {
+        event.preventDefault();
+        closeFlappyMode();
+    }
+
+    if (neighborBackButton) {
+        event.preventDefault();
+        closeNeighborMode();
     }
 });
 
