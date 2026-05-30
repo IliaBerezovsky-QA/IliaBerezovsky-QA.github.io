@@ -154,7 +154,7 @@ let flappyScore = 0;
 let flappyFrame = 0;
 let flappyBestScore = 0;
 
-/* NEIGHBOR TETRIS MODE */
+/* NEIGHBOR SUIKA MODE */
 
 let neighborCtx = neighborCanvas ? neighborCanvas.getContext("2d") : null;
 let neighborAnimationId = null;
@@ -162,54 +162,61 @@ let neighborRunning = false;
 let neighborDistance = 0;
 let neighborBestDistance = 0;
 let neighborFrame = 0;
-let neighborDropTimer = 0;
-let neighborDropInterval = 650;
-let neighborLastTime = 0;
 let neighborGameWon = false;
-let neighborNextPiece = null;
+let neighborLastTime = 0;
+let neighborDropperX = 0;
+let neighborCurrentFruit = 0;
+let neighborNextFruit = 0;
+let neighborFruits = [];
+let neighborParticles = [];
+let neighborShake = 0;
+let neighborDangerTime = 0;
 
 const neighborControls = {
     left: false,
     right: false,
-    rotate: false,
-    down: false
+    drop: false,
+    big: false
 };
 
-const neighborTetris = {
-    cols: 10,
-    rows: 18,
-    board: [],
-    piece: null,
-    cell: 24,
-    boardX: 0,
-    boardY: 0,
+const neighborSuika = {
+    width: 0,
+    height: 0,
+    bowlX: 0,
+    bowlY: 0,
+    bowlW: 0,
+    bowlH: 0,
     score: 0,
-    lines: 0,
+    merges: 0,
     level: 1,
-    buildStage: 0
+    gameOverLine: 0,
+    canDrop: true,
+    dropCooldown: 0
 };
 
-const neighborPieces = [
-    { icon: "🥔", matrix: [[1, 1, 1, 1]] },
-    { icon: "🥕", matrix: [[1, 0, 0], [1, 1, 1]] },
-    { icon: "🌽", matrix: [[0, 0, 1], [1, 1, 1]] },
-    { icon: "🧅", matrix: [[1, 1], [1, 1]] },
-    { icon: "🍅", matrix: [[0, 1, 1], [1, 1, 0]] },
-    { icon: "🥒", matrix: [[0, 1, 0], [1, 1, 1]] },
-    { icon: "🎃", matrix: [[1, 1, 0], [0, 1, 1]] }
+const neighborFruitTypes = [
+    { icon: "🫐", name: "ягода", radius: 16, score: 8 },
+    { icon: "🍒", name: "вишня", radius: 19, score: 14 },
+    { icon: "🍅", name: "томат", radius: 23, score: 24 },
+    { icon: "🥔", name: "картошка", radius: 27, score: 42 },
+    { icon: "🥒", name: "огурец", radius: 32, score: 75 },
+    { icon: "🌽", name: "кукуруза", radius: 38, score: 120 },
+    { icon: "🍆", name: "баклажан", radius: 45, score: 190 },
+    { icon: "🎃", name: "тыква", radius: 54, score: 300 },
+    { icon: "🏡", name: "домик", radius: 64, score: 500 }
 ];
 
 const neighborDedPhrases = [
-    "Фундамент из картошки!",
-    "Вот это стройка!",
-    "Дача сама себя не построит!",
+    "Скрещиваем кабачки!",
+    "Дача растет!",
     "Овощ к овощу!",
-    "Лариса, не мешай!",
-    "Сейчас сарай поднимем!",
-    "Архитектура 6 соток!"
+    "Вот это урожайная физика!",
+    "Лариса, не трогай тыкву!",
+    "Сейчас будет домик!",
+    "Суета на грядке!"
 ];
 
-let neighborDedPhrase = "Дача сама себя не построит!";
+let neighborDedPhrase = "Собери огромный урожай!";
 const crowPhrases = [
     "Одумайся!!!",
     "Одумайся!!!",
@@ -423,18 +430,21 @@ setupNeighborControlButton(neighborLeanBackBtn, "leanBack");
 setupNeighborControlButton(neighborLeanForwardBtn, "leanForward");
 
 if (neighborCanvas) {
-    neighborCanvas.addEventListener("click", (event) => {
+    neighborCanvas.addEventListener("pointermove", (event) => {
         if (!neighborRunning) return;
-
         const rect = neighborCanvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-
-        if (x < rect.width / 2) {
-            handleNeighborControl("left");
-        } else {
-            handleNeighborControl("right");
-        }
+        neighborDropperX = event.clientX - rect.left;
+        clampNeighborDropper();
     });
+
+    neighborCanvas.addEventListener("pointerdown", (event) => {
+        if (!neighborRunning) return;
+        event.preventDefault();
+        const rect = neighborCanvas.getBoundingClientRect();
+        neighborDropperX = event.clientX - rect.left;
+        clampNeighborDropper();
+        dropNeighborFruit();
+    }, { passive: false });
 }
 
 document.addEventListener("keydown", (event) => {
@@ -442,8 +452,7 @@ document.addEventListener("keydown", (event) => {
 
     if (event.key === "ArrowLeft") handleNeighborControl("left");
     if (event.key === "ArrowRight") handleNeighborControl("right");
-    if (event.key === "ArrowUp" || event.key === " ") handleNeighborControl("rotate");
-    if (event.key === "ArrowDown") handleNeighborControl("down");
+    if (event.key === "ArrowUp" || event.key === " " || event.key === "ArrowDown") handleNeighborControl("drop");
 });
 
 
@@ -1112,15 +1121,15 @@ function setupNeighborControlButton(button, controlName) {
 
     const mappedControl = {
         leanBack: "left",
-        brake: "rotate",
-        gas: "down",
+        brake: "big",
+        gas: "drop",
         leanForward: "right"
     }[controlName] || controlName;
 
     button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
-        handleNeighborControl(mappedControl);
         neighborControls[mappedControl] = true;
+        handleNeighborControl(mappedControl);
     });
 
     button.addEventListener("pointerup", (event) => {
@@ -1177,19 +1186,18 @@ function resizeNeighborCanvas() {
     neighborCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     neighborCtx.imageSmoothingEnabled = true;
 
-    calculateNeighborBoardSize(rect.width, rect.height);
+    calculateNeighborSuikaSize(rect.width, rect.height);
 }
 
-function calculateNeighborBoardSize(width, height) {
-    const topSpace = 92;
-    const bottomSpace = 98;
-    const maxBoardWidth = width - 118;
-    const maxBoardHeight = height - topSpace - bottomSpace;
-
-    neighborTetris.cell = Math.floor(Math.min(maxBoardWidth / neighborTetris.cols, maxBoardHeight / neighborTetris.rows));
-    neighborTetris.cell = Math.max(17, Math.min(28, neighborTetris.cell));
-    neighborTetris.boardX = Math.floor((width - neighborTetris.cell * neighborTetris.cols) / 2) + 24;
-    neighborTetris.boardY = topSpace;
+function calculateNeighborSuikaSize(width, height) {
+    neighborSuika.width = width;
+    neighborSuika.height = height;
+    neighborSuika.bowlW = Math.min(width - 34, 390);
+    neighborSuika.bowlH = Math.min(height - 190, 640);
+    neighborSuika.bowlX = Math.floor((width - neighborSuika.bowlW) / 2);
+    neighborSuika.bowlY = 112;
+    neighborSuika.gameOverLine = neighborSuika.bowlY + 74;
+    neighborDropperX = width / 2;
 }
 
 function startNeighborGame() {
@@ -1199,20 +1207,23 @@ function startNeighborGame() {
 
     neighborRunning = true;
     neighborGameWon = false;
-    neighborDistance = 0;
     neighborFrame = 0;
-    neighborDropTimer = 0;
-    neighborDropInterval = 650;
     neighborLastTime = performance.now();
-    neighborDedPhrase = "Дача сама себя не построит!";
+    neighborDistance = 0;
+    neighborDangerTime = 0;
+    neighborShake = 0;
+    neighborFruits = [];
+    neighborParticles = [];
 
-    neighborTetris.score = 0;
-    neighborTetris.lines = 0;
-    neighborTetris.level = 1;
-    neighborTetris.buildStage = 0;
-    neighborTetris.board = createNeighborBoard();
-    neighborNextPiece = createNeighborPiece();
-    spawnNeighborPiece();
+    neighborSuika.score = 0;
+    neighborSuika.merges = 0;
+    neighborSuika.level = 1;
+    neighborSuika.canDrop = true;
+    neighborSuika.dropCooldown = 0;
+
+    neighborCurrentFruit = random(0, 3);
+    neighborNextFruit = random(0, 3);
+    neighborDedPhrase = "Собери огромный урожай!";
 
     neighborDistanceText.textContent = "0";
     neighborStartScreen.classList.add("hidden");
@@ -1221,32 +1232,6 @@ function startNeighborGame() {
 
     cancelAnimationFrame(neighborAnimationId);
     neighborLoop(performance.now());
-}
-
-function createNeighborBoard() {
-    return Array.from({ length: neighborTetris.rows }, () => Array(neighborTetris.cols).fill(null));
-}
-
-function createNeighborPiece() {
-    const template = getRandomItem(neighborPieces);
-
-    return {
-        icon: template.icon,
-        matrix: template.matrix.map((row) => row.slice()),
-        x: 3,
-        y: 0
-    };
-}
-
-function spawnNeighborPiece() {
-    neighborTetris.piece = neighborNextPiece || createNeighborPiece();
-    neighborNextPiece = createNeighborPiece();
-    neighborTetris.piece.x = Math.floor((neighborTetris.cols - neighborTetris.piece.matrix[0].length) / 2);
-    neighborTetris.piece.y = 0;
-
-    if (neighborCollides(neighborTetris.piece, 0, 0, neighborTetris.piece.matrix)) {
-        endNeighborGame(false);
-    }
 }
 
 function stopNeighborGame() {
@@ -1259,148 +1244,258 @@ function stopNeighborGame() {
 
     neighborControls.left = false;
     neighborControls.right = false;
-    neighborControls.rotate = false;
-    neighborControls.down = false;
+    neighborControls.drop = false;
+    neighborControls.big = false;
 }
 
 function neighborLoop(now) {
     if (!neighborRunning) return;
 
-    const delta = now - neighborLastTime;
+    const delta = Math.min(32, now - neighborLastTime);
     neighborLastTime = now;
     neighborFrame++;
 
-    neighborDropTimer += delta;
-
-    const activeInterval = neighborControls.down ? 48 : neighborDropInterval;
-
-    if (neighborDropTimer >= activeInterval) {
-        neighborDropTimer = 0;
-        moveNeighborPiece(0, 1);
-    }
-
+    updateNeighborSuika(delta / 16.67);
     drawNeighborGame();
+
     neighborAnimationId = requestAnimationFrame(neighborLoop);
 }
 
 function handleNeighborControl(control) {
     if (!neighborRunning) return;
 
-    if (control === "left") moveNeighborPiece(-1, 0);
-    if (control === "right") moveNeighborPiece(1, 0);
-    if (control === "rotate") rotateNeighborPiece();
-    if (control === "down") moveNeighborPiece(0, 1);
+    if (control === "left") neighborDropperX -= 26;
+    if (control === "right") neighborDropperX += 26;
+    if (control === "big") neighborDedPhrase = getRandomItem(neighborDedPhrases);
+    if (control === "drop") dropNeighborFruit();
 
-    drawNeighborGame();
+    clampNeighborDropper();
 }
 
-function moveNeighborPiece(dx, dy) {
-    const piece = neighborTetris.piece;
-    if (!piece) return false;
+function updateNeighborSuika(step) {
+    const s = neighborSuika;
+    const moveSpeed = 5.4 * step;
 
-    if (!neighborCollides(piece, dx, dy, piece.matrix)) {
-        piece.x += dx;
-        piece.y += dy;
-        return true;
+    if (neighborControls.left) neighborDropperX -= moveSpeed;
+    if (neighborControls.right) neighborDropperX += moveSpeed;
+    if (neighborControls.drop && s.canDrop) dropNeighborFruit();
+
+    clampNeighborDropper();
+
+    if (!s.canDrop) {
+        s.dropCooldown -= step;
+        if (s.dropCooldown <= 0) s.canDrop = true;
     }
 
-    if (dy > 0) {
-        lockNeighborPiece();
-        clearNeighborLines();
-        spawnNeighborPiece();
-    }
+    const gravity = 0.34 * step;
+    const damping = 0.986;
 
-    return false;
-}
-
-function rotateNeighborPiece() {
-    const piece = neighborTetris.piece;
-    if (!piece) return;
-
-    const rotated = piece.matrix[0].map((_, index) => piece.matrix.map((row) => row[index]).reverse());
-
-    if (!neighborCollides(piece, 0, 0, rotated)) {
-        piece.matrix = rotated;
-        return;
-    }
-
-    if (!neighborCollides(piece, -1, 0, rotated)) {
-        piece.x -= 1;
-        piece.matrix = rotated;
-        return;
-    }
-
-    if (!neighborCollides(piece, 1, 0, rotated)) {
-        piece.x += 1;
-        piece.matrix = rotated;
-    }
-}
-
-function neighborCollides(piece, dx, dy, matrix) {
-    for (let y = 0; y < matrix.length; y++) {
-        for (let x = 0; x < matrix[y].length; x++) {
-            if (!matrix[y][x]) continue;
-
-            const boardX = piece.x + x + dx;
-            const boardY = piece.y + y + dy;
-
-            if (boardX < 0 || boardX >= neighborTetris.cols || boardY >= neighborTetris.rows) {
-                return true;
-            }
-
-            if (boardY >= 0 && neighborTetris.board[boardY][boardX]) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function lockNeighborPiece() {
-    const piece = neighborTetris.piece;
-    if (!piece) return;
-
-    piece.matrix.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (!value) return;
-
-            const boardY = piece.y + y;
-            const boardX = piece.x + x;
-
-            if (boardY >= 0 && boardY < neighborTetris.rows && boardX >= 0 && boardX < neighborTetris.cols) {
-                neighborTetris.board[boardY][boardX] = piece.icon;
-            }
-        });
+    neighborFruits.forEach((fruit) => {
+        fruit.vy += gravity;
+        fruit.x += fruit.vx * step;
+        fruit.y += fruit.vy * step;
+        fruit.rotation += fruit.vr * step;
+        fruit.vx *= damping;
+        fruit.vy *= 0.997;
+        fruit.settledFrames = Math.abs(fruit.vx) + Math.abs(fruit.vy) < 0.35 ? fruit.settledFrames + 1 : 0;
+        resolveNeighborWallCollision(fruit);
     });
+
+    for (let i = 0; i < 4; i++) {
+        resolveNeighborFruitCollisions();
+    }
+
+    updateNeighborParticles(step);
+    updateNeighborDanger(step);
+
+    if (neighborShake > 0) neighborShake *= 0.88;
 }
 
-function clearNeighborLines() {
-    let cleared = 0;
+function clampNeighborDropper() {
+    const fruit = neighborFruitTypes[neighborCurrentFruit];
+    const minX = neighborSuika.bowlX + fruit.radius + 8;
+    const maxX = neighborSuika.bowlX + neighborSuika.bowlW - fruit.radius - 8;
+    neighborDropperX = Math.max(minX, Math.min(maxX, neighborDropperX));
+}
 
-    for (let y = neighborTetris.rows - 1; y >= 0; y--) {
-        if (neighborTetris.board[y].every(Boolean)) {
-            neighborTetris.board.splice(y, 1);
-            neighborTetris.board.unshift(Array(neighborTetris.cols).fill(null));
-            cleared++;
-            y++;
+function dropNeighborFruit() {
+    const s = neighborSuika;
+    if (!s.canDrop) return;
+
+    const type = neighborFruitTypes[neighborCurrentFruit];
+    const fruit = {
+        id: Date.now() + Math.random(),
+        type: neighborCurrentFruit,
+        icon: type.icon,
+        radius: type.radius,
+        x: neighborDropperX,
+        y: s.bowlY + 28,
+        vx: random(-8, 8) / 30,
+        vy: 1.2,
+        rotation: random(-20, 20) / 100,
+        vr: random(-7, 7) / 100,
+        merged: false,
+        settledFrames: 0,
+        bornAt: performance.now()
+    };
+
+    neighborFruits.push(fruit);
+    s.canDrop = false;
+    s.dropCooldown = 18;
+    neighborCurrentFruit = neighborNextFruit;
+    neighborNextFruit = random(0, Math.min(4, 2 + s.level));
+}
+
+function resolveNeighborWallCollision(fruit) {
+    const s = neighborSuika;
+    const left = s.bowlX + fruit.radius;
+    const right = s.bowlX + s.bowlW - fruit.radius;
+    const bottom = s.bowlY + s.bowlH - fruit.radius;
+
+    if (fruit.x < left) {
+        fruit.x = left;
+        fruit.vx = Math.abs(fruit.vx) * 0.55;
+    }
+
+    if (fruit.x > right) {
+        fruit.x = right;
+        fruit.vx = -Math.abs(fruit.vx) * 0.55;
+    }
+
+    if (fruit.y > bottom) {
+        fruit.y = bottom;
+        fruit.vy = -Math.abs(fruit.vy) * 0.22;
+        fruit.vx *= 0.82;
+        fruit.vr *= 0.85;
+    }
+}
+
+function resolveNeighborFruitCollisions() {
+    for (let i = 0; i < neighborFruits.length; i++) {
+        const a = neighborFruits[i];
+        if (a.merged) continue;
+
+        for (let j = i + 1; j < neighborFruits.length; j++) {
+            const b = neighborFruits[j];
+            if (b.merged) continue;
+
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const minDist = a.radius + b.radius;
+
+            if (dist >= minDist) continue;
+
+            if (a.type === b.type && a.type < neighborFruitTypes.length - 1) {
+                mergeNeighborFruits(a, b);
+                continue;
+            }
+
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+
+            const push = 0.045;
+            a.vx -= nx * push;
+            a.vy -= ny * push;
+            b.vx += nx * push;
+            b.vy += ny * push;
+
+            resolveNeighborWallCollision(a);
+            resolveNeighborWallCollision(b);
         }
     }
 
-    if (!cleared) return;
+    neighborFruits = neighborFruits.filter((fruit) => !fruit.merged);
+}
 
-    neighborTetris.lines += cleared;
-    neighborTetris.score += cleared * cleared * 100;
-    neighborTetris.level = Math.floor(neighborTetris.lines / 4) + 1;
-    neighborTetris.buildStage = Math.min(5, Math.floor(neighborTetris.lines / 2));
-    neighborDistance = neighborTetris.score;
+function mergeNeighborFruits(a, b) {
+    const newType = a.type + 1;
+    const type = neighborFruitTypes[newType];
+    const x = (a.x + b.x) / 2;
+    const y = (a.y + b.y) / 2;
+
+    a.merged = true;
+    b.merged = true;
+
+    neighborFruits.push({
+        id: Date.now() + Math.random(),
+        type: newType,
+        icon: type.icon,
+        radius: type.radius,
+        x,
+        y,
+        vx: (a.vx + b.vx) * 0.25,
+        vy: -1.6,
+        rotation: 0,
+        vr: random(-8, 8) / 100,
+        merged: false,
+        settledFrames: 0,
+        bornAt: performance.now()
+    });
+
+    neighborSuika.merges++;
+    neighborSuika.score += type.score;
+    neighborSuika.level = Math.floor(neighborSuika.merges / 5) + 1;
+    neighborDistance = neighborSuika.score;
     neighborBestDistance = Math.max(neighborBestDistance, neighborDistance);
-    neighborDropInterval = Math.max(180, 650 - neighborTetris.level * 42);
+    neighborDistanceText.textContent = neighborSuika.score;
     neighborDedPhrase = getRandomItem(neighborDedPhrases);
-    neighborDistanceText.textContent = neighborTetris.score;
+    neighborShake = Math.min(12, 5 + newType);
 
-    if (neighborTetris.lines >= 12) {
+    createNeighborMergeParticles(x, y, type.icon, newType);
+
+    if (newType >= neighborFruitTypes.length - 1) {
         endNeighborGame(true);
+    }
+}
+
+function createNeighborMergeParticles(x, y, icon, type) {
+    for (let i = 0; i < 14; i++) {
+        neighborParticles.push({
+            x,
+            y,
+            vx: random(-50, 50) / 12,
+            vy: random(-72, 24) / 12,
+            life: 42,
+            maxLife: 42,
+            icon: i % 3 === 0 ? icon : "✨",
+            size: 16 + type * 2
+        });
+    }
+}
+
+function updateNeighborParticles(step) {
+    neighborParticles.forEach((p) => {
+        p.x += p.vx * step;
+        p.y += p.vy * step;
+        p.vy += 0.12 * step;
+        p.life -= step;
+    });
+
+    neighborParticles = neighborParticles.filter((p) => p.life > 0);
+}
+
+function updateNeighborDanger(step) {
+    const now = performance.now();
+    const risky = neighborFruits.some((fruit) => {
+        const oldEnough = now - fruit.bornAt > 2200;
+        return oldEnough && fruit.y - fruit.radius < neighborSuika.gameOverLine && fruit.settledFrames > 40;
+    });
+
+    if (risky) {
+        neighborDangerTime += step;
+    } else {
+        neighborDangerTime = Math.max(0, neighborDangerTime - step * 2.2);
+    }
+
+    if (neighborDangerTime > 150) {
+        endNeighborGame(false);
     }
 }
 
@@ -1409,20 +1504,20 @@ function drawNeighborIntro() {
 
     const rect = neighborMode.getBoundingClientRect();
     drawNeighborBackground(rect.width, rect.height);
+    drawNeighborBowl();
     drawNeighborGrandpa(rect.width, rect.height);
-    drawNeighborHouse(rect.width - 82, rect.height - 132, 3);
 
     neighborCtx.save();
     neighborCtx.fillStyle = "rgba(255,255,255,.9)";
     neighborCtx.strokeStyle = "#5b3417";
     neighborCtx.lineWidth = 5;
-    roundRect(neighborCtx, 36, rect.height - 205, rect.width - 72, 76, 18, true, true);
+    roundRect(neighborCtx, 28, rect.height - 216, rect.width - 56, 92, 22, true, true);
     neighborCtx.fillStyle = "#3a1e0c";
     neighborCtx.font = "900 17px Arial";
     neighborCtx.textAlign = "center";
-    neighborCtx.fillText("Кнопки снизу: ←  ↻  ↓  →", rect.width / 2, rect.height - 164);
+    neighborCtx.fillText("Соединяй одинаковые овощи", rect.width / 2, rect.height - 176);
     neighborCtx.font = "900 14px Arial";
-    neighborCtx.fillText("Очисти 12 рядов, чтобы достроить дачу", rect.width / 2, rect.height - 140);
+    neighborCtx.fillText("Цель: вырастить домик 🏡", rect.width / 2, rect.height - 150);
     neighborCtx.restore();
 }
 
@@ -1433,32 +1528,46 @@ function drawNeighborGame() {
     const width = rect.width;
     const height = rect.height;
 
+    neighborCtx.save();
+    if (neighborShake > 0.4) {
+        neighborCtx.translate(random(-neighborShake, neighborShake) / 2, random(-neighborShake, neighborShake) / 2);
+    }
+
     drawNeighborBackground(width, height);
-    drawNeighborBoard();
-    drawNeighborPiece();
+    drawNeighborBowl();
+    drawNeighborDangerLine();
+    drawNeighborFruits();
+    drawNeighborDropper();
+    drawNeighborParticles();
     drawNeighborGrandpa(width, height);
-    drawNeighborHouse(width - 78, height - 128, neighborTetris.buildStage);
     drawNeighborHud(width, height);
+    neighborCtx.restore();
 }
 
 function drawNeighborBackground(width, height) {
     const gradient = neighborCtx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "#8fd8f7");
-    gradient.addColorStop(0.58, "#b8f7a4");
-    gradient.addColorStop(1, "#65a30d");
+    gradient.addColorStop(0, "#7dd3fc");
+    gradient.addColorStop(0.46, "#bbf7d0");
+    gradient.addColorStop(1, "#4d7c0f");
 
     neighborCtx.fillStyle = gradient;
     neighborCtx.fillRect(0, 0, width, height);
 
     neighborCtx.fillStyle = "rgba(255,255,255,.55)";
-    for (let i = 0; i < 4; i++) {
-        const x = (i * 145 + neighborFrame * 0.18) % (width + 130) - 80;
-        const y = 118 + Math.sin((neighborFrame + i * 31) / 34) * 8;
+    for (let i = 0; i < 5; i++) {
+        const x = (i * 135 + neighborFrame * 0.2) % (width + 130) - 80;
+        const y = 92 + i * 12 + Math.sin((neighborFrame + i * 31) / 34) * 8;
         drawNeighborCloud(x, y);
     }
 
-    neighborCtx.fillStyle = "rgba(91,52,23,.9)";
-    neighborCtx.fillRect(0, height - 22, width, 22);
+    neighborCtx.fillStyle = "rgba(91,52,23,.92)";
+    neighborCtx.fillRect(0, height - 24, width, 24);
+
+    neighborCtx.fillStyle = "rgba(255,255,255,.18)";
+    for (let i = 0; i < 18; i++) {
+        const x = (i * 29 + neighborFrame * 0.35) % width;
+        neighborCtx.fillText("🌱", x, height - 34 - (i % 3) * 8);
+    }
 }
 
 function drawNeighborCloud(x, y) {
@@ -1469,63 +1578,117 @@ function drawNeighborCloud(x, y) {
     neighborCtx.fill();
 }
 
-function drawNeighborBoard() {
-    const t = neighborTetris;
-    const width = t.cols * t.cell;
-    const height = t.rows * t.cell;
+function drawNeighborBowl() {
+    const s = neighborSuika;
 
     neighborCtx.save();
-    neighborCtx.fillStyle = "rgba(255, 247, 214, .92)";
+    neighborCtx.fillStyle = "rgba(255, 247, 214, .7)";
     neighborCtx.strokeStyle = "#5b3417";
-    neighborCtx.lineWidth = 5;
-    roundRect(neighborCtx, t.boardX - 8, t.boardY - 8, width + 16, height + 16, 16, true, true);
+    neighborCtx.lineWidth = 7;
+    roundRect(neighborCtx, s.bowlX, s.bowlY, s.bowlW, s.bowlH, 26, true, true);
 
-    neighborCtx.fillStyle = "rgba(91, 52, 23, .1)";
-    for (let y = 0; y < t.rows; y++) {
-        for (let x = 0; x < t.cols; x++) {
-            neighborCtx.strokeStyle = "rgba(91,52,23,.16)";
-            neighborCtx.lineWidth = 1;
-            neighborCtx.strokeRect(t.boardX + x * t.cell, t.boardY + y * t.cell, t.cell, t.cell);
+    neighborCtx.fillStyle = "rgba(255,255,255,.22)";
+    roundRect(neighborCtx, s.bowlX + 10, s.bowlY + 10, s.bowlW - 20, s.bowlH - 20, 20, true, false);
 
-            if (t.board[y][x]) {
-                drawNeighborBlock(t.board[y][x], t.boardX + x * t.cell, t.boardY + y * t.cell, t.cell);
-            }
-        }
+    neighborCtx.strokeStyle = "rgba(91,52,23,.12)";
+    neighborCtx.lineWidth = 1;
+    for (let y = s.bowlY + 38; y < s.bowlY + s.bowlH - 20; y += 38) {
+        neighborCtx.beginPath();
+        neighborCtx.moveTo(s.bowlX + 14, y);
+        neighborCtx.lineTo(s.bowlX + s.bowlW - 14, y);
+        neighborCtx.stroke();
     }
 
     neighborCtx.restore();
 }
 
-function drawNeighborPiece() {
-    const piece = neighborTetris.piece;
-    if (!piece) return;
+function drawNeighborDangerLine() {
+    const s = neighborSuika;
+    const alpha = neighborDangerTime > 0 ? 0.75 + Math.sin(neighborFrame / 5) * 0.2 : 0.34;
 
-    piece.matrix.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (!value) return;
-            drawNeighborBlock(
-                piece.icon,
-                neighborTetris.boardX + (piece.x + x) * neighborTetris.cell,
-                neighborTetris.boardY + (piece.y + y) * neighborTetris.cell,
-                neighborTetris.cell
-            );
-        });
-    });
-}
-
-function drawNeighborBlock(icon, x, y, size) {
     neighborCtx.save();
-    neighborCtx.fillStyle = "rgba(255,255,255,.55)";
-    neighborCtx.fillRect(x + 2, y + 2, size - 4, size - 4);
-    neighborCtx.font = `${Math.floor(size * 0.82)}px Arial`;
-    neighborCtx.textAlign = "center";
-    neighborCtx.textBaseline = "middle";
-    neighborCtx.fillText(icon, x + size / 2, y + size / 2 + 1);
+    neighborCtx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+    neighborCtx.setLineDash([8, 8]);
+    neighborCtx.lineWidth = 3;
+    neighborCtx.beginPath();
+    neighborCtx.moveTo(s.bowlX + 12, s.gameOverLine);
+    neighborCtx.lineTo(s.bowlX + s.bowlW - 12, s.gameOverLine);
+    neighborCtx.stroke();
+    neighborCtx.setLineDash([]);
+    neighborCtx.fillStyle = `rgba(127, 29, 29, ${alpha})`;
+    neighborCtx.font = "900 12px Arial";
+    neighborCtx.textAlign = "right";
+    neighborCtx.fillText("опасная грядка", s.bowlX + s.bowlW - 16, s.gameOverLine - 8);
     neighborCtx.restore();
 }
 
+function drawNeighborDropper() {
+    const s = neighborSuika;
+    const type = neighborFruitTypes[neighborCurrentFruit];
+    const y = s.bowlY + 32;
+
+    neighborCtx.save();
+    neighborCtx.strokeStyle = "rgba(58,30,12,.38)";
+    neighborCtx.lineWidth = 3;
+    neighborCtx.beginPath();
+    neighborCtx.moveTo(neighborDropperX, s.bowlY + 2);
+    neighborCtx.lineTo(neighborDropperX, y + type.radius + 14);
+    neighborCtx.stroke();
+
+    neighborCtx.fillStyle = "rgba(255,255,255,.9)";
+    neighborCtx.strokeStyle = "#5b3417";
+    neighborCtx.lineWidth = 4;
+    roundRect(neighborCtx, neighborDropperX - 42, s.bowlY - 48, 84, 40, 17, true, true);
+    neighborCtx.fillStyle = "#3a1e0c";
+    neighborCtx.font = "900 12px Arial";
+    neighborCtx.textAlign = "center";
+    neighborCtx.fillText(`Дальше ${neighborFruitTypes[neighborNextFruit].icon}`, neighborDropperX, s.bowlY - 23);
+
+    drawNeighborFruitIcon(type.icon, neighborDropperX, y, type.radius, 0, true);
+    neighborCtx.restore();
+}
+
+function drawNeighborFruits() {
+    neighborFruits.forEach((fruit) => {
+        drawNeighborFruitIcon(fruit.icon, fruit.x, fruit.y, fruit.radius, fruit.rotation, false);
+    });
+}
+
+function drawNeighborFruitIcon(icon, x, y, radius, rotation, ghost) {
+    neighborCtx.save();
+    neighborCtx.translate(x, y);
+    neighborCtx.rotate(rotation);
+
+    neighborCtx.fillStyle = ghost ? "rgba(255,255,255,.55)" : "rgba(255,255,255,.82)";
+    neighborCtx.strokeStyle = "rgba(91,52,23,.55)";
+    neighborCtx.lineWidth = Math.max(2, radius * 0.08);
+    neighborCtx.beginPath();
+    neighborCtx.arc(0, 0, radius, 0, Math.PI * 2);
+    neighborCtx.fill();
+    neighborCtx.stroke();
+
+    neighborCtx.font = `${Math.floor(radius * 1.45)}px Arial`;
+    neighborCtx.textAlign = "center";
+    neighborCtx.textBaseline = "middle";
+    neighborCtx.fillText(icon, 0, 2);
+    neighborCtx.restore();
+}
+
+function drawNeighborParticles() {
+    neighborParticles.forEach((p) => {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        neighborCtx.save();
+        neighborCtx.globalAlpha = alpha;
+        neighborCtx.font = `${p.size}px Arial`;
+        neighborCtx.textAlign = "center";
+        neighborCtx.textBaseline = "middle";
+        neighborCtx.fillText(p.icon, p.x, p.y);
+        neighborCtx.restore();
+    });
+}
+
 function drawNeighborGrandpa(width, height) {
-    const x = 50;
+    const x = 54;
     const y = height - 74;
 
     neighborCtx.save();
@@ -1537,12 +1700,12 @@ function drawNeighborGrandpa(width, height) {
     neighborCtx.fillStyle = "#fff7d6";
     neighborCtx.strokeStyle = "#5b3417";
     neighborCtx.lineWidth = 4;
-    roundRect(neighborCtx, 16, y - 106, 132, 52, 16, true, true);
+    roundRect(neighborCtx, 16, y - 106, 138, 52, 16, true, true);
 
     neighborCtx.fillStyle = "#3a1e0c";
     neighborCtx.font = "900 12px Arial";
     neighborCtx.textAlign = "center";
-    wrapNeighborText(neighborDedPhrase, 82, y - 83, 116, 14);
+    wrapNeighborText(neighborDedPhrase, 85, y - 84, 120, 14);
     neighborCtx.restore();
 }
 
@@ -1565,48 +1728,6 @@ function wrapNeighborText(text, x, y, maxWidth, lineHeight) {
     neighborCtx.fillText(line, x, currentY);
 }
 
-function drawNeighborHouse(x, y, stage) {
-    neighborCtx.save();
-    neighborCtx.translate(x, y);
-
-    neighborCtx.fillStyle = "#5b3417";
-    neighborCtx.fillRect(-42, 28, 84, 14);
-
-    if (stage >= 1) {
-        neighborCtx.fillStyle = "#d97706";
-        neighborCtx.fillRect(-36, -8, 72, 42);
-    }
-
-    if (stage >= 2) {
-        neighborCtx.fillStyle = "#7c2d12";
-        neighborCtx.beginPath();
-        neighborCtx.moveTo(-46, -8);
-        neighborCtx.lineTo(0, -44);
-        neighborCtx.lineTo(46, -8);
-        neighborCtx.closePath();
-        neighborCtx.fill();
-    }
-
-    if (stage >= 3) {
-        neighborCtx.fillStyle = "#fde68a";
-        neighborCtx.fillRect(-22, 6, 15, 15);
-        neighborCtx.fillRect(10, 6, 15, 15);
-    }
-
-    if (stage >= 4) {
-        neighborCtx.fillStyle = "#3a1e0c";
-        neighborCtx.fillRect(-6, 10, 16, 24);
-    }
-
-    if (stage >= 5) {
-        neighborCtx.font = "34px Arial";
-        neighborCtx.textAlign = "center";
-        neighborCtx.fillText("🏡", 0, -54);
-    }
-
-    neighborCtx.restore();
-}
-
 function drawNeighborHud(width, height) {
     neighborCtx.save();
 
@@ -1618,15 +1739,12 @@ function drawNeighborHud(width, height) {
     neighborCtx.fillStyle = "#3a1e0c";
     neighborCtx.font = "900 15px Arial";
     neighborCtx.textAlign = "left";
-    neighborCtx.fillText(`Ряды: ${neighborTetris.lines}/12`, 30, height - 61);
-    neighborCtx.fillText(`Уровень: ${neighborTetris.level}`, 30, height - 39);
+    neighborCtx.fillText(`Слияния: ${neighborSuika.merges}`, 30, height - 61);
+    neighborCtx.fillText(`Уровень: ${neighborSuika.level}`, 30, height - 39);
 
     neighborCtx.textAlign = "right";
-    neighborCtx.fillText(`Очки: ${neighborTetris.score}`, width - 30, height - 61);
-
-    if (neighborNextPiece) {
-        neighborCtx.fillText(`Дальше: ${neighborNextPiece.icon}`, width - 30, height - 39);
-    }
+    neighborCtx.fillText(`Очки: ${neighborSuika.score}`, width - 30, height - 61);
+    neighborCtx.fillText(`Цель: 🏡`, width - 30, height - 39);
 
     neighborCtx.restore();
 }
@@ -1659,7 +1777,7 @@ function endNeighborGame(isWin) {
         const subtitle = neighborWinScreen.querySelector(".neighbor-subtitle");
 
         if (subtitle) {
-            subtitle.textContent = `Ряды: ${neighborTetris.lines}. Очки: ${neighborTetris.score}. Дед построил дачу мечты.`;
+            subtitle.textContent = `Очки: ${neighborSuika.score}. Дед вырастил домик из урожая.`;
         }
         return;
     }
@@ -1669,7 +1787,7 @@ function endNeighborGame(isWin) {
     const subtitle = neighborGameOver.querySelector(".neighbor-subtitle");
 
     if (subtitle) {
-        subtitle.textContent = `Очки: ${neighborTetris.score}. Рекорд: ${neighborBestDistance}. Дед задумался о втором сарае.`;
+        subtitle.textContent = `Очки: ${neighborSuika.score}. Рекорд: ${neighborBestDistance}. Участок завалило урожаем.`;
     }
 }
 
