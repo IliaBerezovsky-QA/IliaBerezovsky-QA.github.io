@@ -19,18 +19,22 @@ const houseNames = [
     "Домище",
     "Коттедж",
     "Особняк",
-    "Ферма",
+    "Пентхауз",
     "Усадьба",
     "Дворец дачника",
     "Империя 6 соток"
 ];
 
 const loader = document.getElementById("loader");
+const onboarding = document.getElementById("onboarding");
 const game = document.getElementById("game");
 const prizesScreen = document.getElementById("prizesScreen");
 const pawTrack = document.getElementById("pawTrack");
 
 const startBtn = document.getElementById("startBtn");
+const onboardingImage = document.getElementById("onboardingImage");
+const onboardingNextBtn = document.getElementById("onboardingNextBtn");
+const onboardingSkipBtn = document.getElementById("onboardingSkipBtn");
 const backBtn = document.getElementById("backBtn");
 const prizesBtn = document.getElementById("prizesBtn");
 const prizesBackBtn = document.getElementById("prizesBackBtn");
@@ -55,6 +59,18 @@ const levelUpText = document.getElementById("levelUpText");
 const bgMusic = new Audio("assets/fonsound.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
+
+const onboardingMusic = new Audio("assets/termit.mp3");
+onboardingMusic.loop = true;
+onboardingMusic.volume = 0.6;
+
+const onboardingSlides = [
+    "assets/onb1.jpg",
+    "assets/onb2.jpg",
+    "assets/onb3.jpg"
+];
+
+let onboardingStep = 0;
 
 const hitSounds = [
     new Audio("assets/kia.mp3"),
@@ -133,23 +149,51 @@ window.addEventListener("load", () => {
     startPawWalk();
 
     setTimeout(() => {
-    loader.classList.add("ready");
-    stopPawWalk();
-}, 4000);
+        loader.classList.add("ready");
+        stopPawWalk();
+    }, 4000);
 });
 
 startBtn.addEventListener("click", () => {
-    startMusic();
     stopPawWalk();
-    showGame();
+    showOnboarding();
 });
+
+onboardingNextBtn.addEventListener("click", () => {
+
+    onboardingStep++;
+
+    if (onboardingStep < onboardingSlides.length) {
+        onboardingImage.src = onboardingSlides[onboardingStep];
+        return;
+    }
+
+    finishOnboarding();
+});
+
+onboardingSkipBtn.addEventListener("click", () => {
+    finishOnboarding();
+});
+
+function finishOnboarding() {
+
+    stopOnboardingMusic();
+
+    onboarding.classList.add("hidden");
+
+    startMusic();
+    showGame();
+}
 
 backBtn.addEventListener("click", () => {
     bgMusic.pause();
     bgMusic.currentTime = 0;
     isMusicStarted = false;
 
+    stopOnboardingMusic();
+
     loader.classList.remove("ready");
+    onboarding.classList.add("hidden");
     game.classList.add("hidden");
     prizesScreen.classList.add("hidden");
     loader.classList.remove("hidden");
@@ -157,9 +201,9 @@ backBtn.addEventListener("click", () => {
     startPawWalk();
 
     setTimeout(() => {
-    loader.classList.add("ready");
-    stopPawWalk();
-}, 4000);
+        loader.classList.add("ready");
+        stopPawWalk();
+    }, 4000);
 });
 
 prizesBtn.addEventListener("click", () => {
@@ -239,6 +283,20 @@ function createFootprint() {
     }
 }
 
+function startOnboardingMusic() {
+    onboardingMusic.currentTime = 0;
+
+    onboardingMusic.play()
+        .catch((error) => {
+            console.log("Музыка онбординга не запустилась:", error);
+        });
+}
+
+function stopOnboardingMusic() {
+    onboardingMusic.pause();
+    onboardingMusic.currentTime = 0;
+}
+
 function startMusic() {
     if (isMusicStarted) return;
 
@@ -271,8 +329,21 @@ function playLevelUpSound() {
     levelUpSound.play();
 }
 
+function showOnboarding() {
+    loader.classList.add("hidden");
+    game.classList.add("hidden");
+    prizesScreen.classList.add("hidden");
+
+    onboardingStep = 0;
+    onboardingImage.src = onboardingSlides[onboardingStep];
+
+    onboarding.classList.remove("hidden");
+    startOnboardingMusic();
+}
+
 function showGame() {
     loader.classList.add("hidden");
+    onboarding.classList.add("hidden");
     prizesScreen.classList.add("hidden");
     game.classList.remove("hidden");
 }
@@ -287,7 +358,14 @@ function updateUI() {
     houseImg.src = `assets/dom${houseLevel}.png`;
 
     const nextCost = getNextCost();
-    nextUpgradeText.textContent = nextCost ? nextCost - totalFruitScore : "MAX";
+
+    if (nextCost) {
+        document.querySelector(".house-next").innerHTML =
+            `До улучшения: <span id="nextUpgrade">${nextCost - totalFruitScore}</span>`;
+    } else {
+        document.querySelector(".house-next").textContent =
+            "Продолжай, скоро приз 😎";
+    }
 }
 
 function hitCrow() {

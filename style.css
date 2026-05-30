@@ -533,6 +533,79 @@ button {
     text-shadow: 2px 2px 0 #7f1d1d, 0 8px 20px rgba(0,0,0,.35);
 }
 
+.onboarding {
+    position: absolute;
+    inset: 0;
+    z-index: 140;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+}
+
+.onboarding-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    background: #000;
+    pointer-events: none;
+}
+
+.onboarding-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: max(34px, env(safe-area-inset-bottom));
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+
+    z-index: 10;
+}
+
+.onboarding-next-btn {
+    min-width: 170px;
+    height: 70px;
+
+    border: 5px solid #8b4513;
+    border-radius: 24px;
+
+    background:
+        linear-gradient(180deg,#ffe66d 0%,#ff9f1c 54%,#f97316 100%);
+
+    color: white;
+    font-size: 28px;
+    font-weight: 900;
+
+    box-shadow:
+        0 8px 0 #6f320e,
+        0 18px 28px rgba(0,0,0,.28);
+
+    cursor: pointer;
+}
+
+.onboarding-skip-btn {
+    background: transparent;
+    border: none;
+
+    color: #ff9f1c;
+
+    font-size: 22px;
+    font-weight: 900;
+
+    cursor: pointer;
+}
+
+.onboarding-next-btn:active,
+.onboarding-skip-btn:active {
+    transform: scale(.96);
+}
+
 @keyframes footprintLife {
     0% {
         opacity: 0;
@@ -684,8 +757,18 @@ button {
     }
 
     .prizes-btn {
-    width: 96px;
-    height: 84px;
-    font-size: 30px;
+        width: 96px;
+        height: 84px;
+        font-size: 30px;
+    }
+
+    .onboarding-next-btn {
+    min-width: 150px;
+    height: 60px;
+    font-size: 24px;
+}
+
+.onboarding-skip-btn {
+    font-size: 20px;
 }
 }
