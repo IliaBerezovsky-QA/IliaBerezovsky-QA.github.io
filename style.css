@@ -232,11 +232,15 @@ button {
 
 .house-zone {
     position: absolute;
-    right: -10px;
-    top: -34px;
+    right: 5px;
+    top: 10px;
     width: 210px;
     z-index: 30;
     text-align: center;
+
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
 }
 
 .house-img {
