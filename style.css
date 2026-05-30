@@ -97,6 +97,36 @@ button {
     transform: translate(-50%, -50%) scale(1);
 }
 
+.creator-sign {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    bottom: 15px;
+
+    text-align: center;
+
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+
+    opacity: 0;
+
+    text-shadow:
+        0 1px 0 rgba(0,0,0,.5),
+        0 2px 6px rgba(0,0,0,.35);
+
+    pointer-events: none;
+    z-index: 20;
+
+    transition: opacity .3s ease;
+}
+
+.loader.ready .creator-sign {
+    opacity: .75;
+}
+
 .paw-track {
     position: absolute;
     inset: 0;
@@ -549,7 +579,7 @@ button {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center;
+    object-position: center top;
     background: #000;
     pointer-events: none;
 }
