@@ -6,6 +6,7 @@ let houseLevel = 1;
 let fruitPower = 1;
 let totalFruitScore = 0;
 let isLevelUpActive = false;
+let lastTouchEndTime = 0;
 
 const upgradeCosts = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
 
@@ -103,6 +104,20 @@ const grannyPhrases = [
     "За Геймификацию..!)"
 ];
 
+document.addEventListener("dblclick", (event) => {
+    event.preventDefault();
+}, { passive: false });
+
+document.addEventListener("touchend", (event) => {
+    const now = Date.now();
+
+    if (now - lastTouchEndTime <= 300) {
+        event.preventDefault();
+    }
+
+    lastTouchEndTime = now;
+}, { passive: false });
+
 window.addEventListener("load", () => {
     setTimeout(() => {
         loader.classList.add("ready");
@@ -140,7 +155,10 @@ prizesBackBtn.addEventListener("click", () => {
     game.classList.remove("hidden");
 });
 
-crow.addEventListener("click", hitCrow);
+crow.addEventListener("click", (event) => {
+    event.preventDefault();
+    hitCrow();
+});
 
 function startMusic() {
     if (isMusicStarted) return;
