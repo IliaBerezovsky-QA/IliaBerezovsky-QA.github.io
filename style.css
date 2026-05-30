@@ -28,7 +28,7 @@ button {
 
 .app-shell {
     width: min(100vw, 430px);
-    height: min(100vh, 932px);
+    height: min(100dvh, 932px);
     margin: 0 auto;
     position: relative;
     overflow: hidden;
@@ -43,19 +43,20 @@ button {
 }
 
 .loader {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    width: min(100vw, 430px);
-    height: min(100vh, 932px);
-    transform: translate(-50%, -50%);
+    position: absolute;
+    inset: 0;
     z-index: 100;
+
+    width: 100%;
+    height: 100%;
+
     background: linear-gradient(180deg, #8fd8f7 0%, #2196f3 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 38px;
+
+    border-radius: inherit;
     overflow: hidden;
 }
 
@@ -139,22 +140,45 @@ button {
 .start-btn {
     position: absolute;
     left: 50%;
-    bottom: 110px;
+    bottom: 108px;
     transform: translateX(-50%) scale(.8);
     opacity: 0;
     pointer-events: none;
-    border: 6px solid #9a5a16;
-    border-radius: 24px;
-    background: linear-gradient(#fde047, #f97316);
-    color: white;
+
+    min-width: 210px;
+    height: 76px;
+    padding: 0 42px;
+
+    border: 5px solid #8b4513;
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+
+    color: #ffffff;
     font-size: 30px;
     font-weight: 900;
-    padding: 16px 52px;
-    box-shadow: 0 9px 0 #7c2d12;
-    text-shadow: 3px 3px 0 #00000066;
+    letter-spacing: .5px;
+
+    box-shadow:
+        inset 0 3px 0 rgba(255,255,255,.65),
+        inset 0 -5px 0 rgba(154,69,16,.35),
+        0 8px 0 #6f320e,
+        0 18px 28px rgba(0,0,0,.28);
+
+    text-shadow:
+        0 2px 0 rgba(124,45,18,.95),
+        0 4px 8px rgba(0,0,0,.35);
+
     cursor: pointer;
-    transition: .35s;
+    transition: transform .25s ease, filter .25s ease, opacity .35s ease;
     z-index: 6;
+}
+
+.start-btn:active,
+.prizes-btn:active {
+    transform: translateX(-50%) scale(.96);
+    filter: brightness(.95);
 }
 
 .game {
@@ -360,25 +384,45 @@ button {
     right: 18px;
     bottom: 20px;
     z-index: 75;
-    width: 96px;
-    height: 86px;
-    border: 5px solid #9a5a16;
-    border-radius: 24px;
-    background: linear-gradient(#fde047, #f97316);
+
+    width: 104px;
+    height: 92px;
+
+    border: 5px solid #8b4513;
+    border-radius: 28px;
+
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+
     color: white;
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 900;
-    box-shadow: 0 8px 0 #7c2d12;
-    text-shadow: 2px 2px 0 #00000066;
+
+    box-shadow:
+        inset 0 3px 0 rgba(255,255,255,.65),
+        inset 0 -5px 0 rgba(154,69,16,.35),
+        0 8px 0 #6f320e,
+        0 18px 28px rgba(0,0,0,.28);
+
+    text-shadow:
+        0 2px 0 rgba(124,45,18,.95),
+        0 4px 8px rgba(0,0,0,.35);
+
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+
+    transition: transform .25s ease, filter .25s ease;
 }
 
 .prizes-btn span {
-    font-size: 17px;
+    margin-top: 2px;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .2px;
 }
 
 .effects {
@@ -597,17 +641,12 @@ button {
 @media (max-width: 600px) {
     body { background: #000; }
 
-    .app-shell {
-        width: 100vw;
-        height: 100dvh;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
+    .app-shell,
     .loader {
         width: 100vw;
         height: 100dvh;
         border-radius: 0;
+        box-shadow: none;
     }
 }
 
@@ -645,8 +684,8 @@ button {
     }
 
     .prizes-btn {
-        width: 88px;
-        height: 80px;
-        font-size: 28px;
-    }
+    width: 96px;
+    height: 84px;
+    font-size: 30px;
+}
 }

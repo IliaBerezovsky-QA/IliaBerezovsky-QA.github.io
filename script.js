@@ -56,8 +56,16 @@ const bgMusic = new Audio("assets/fonsound.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
 
-const hitSound = new Audio("assets/kia.mp3");
-hitSound.volume = 1.0;
+const hitSounds = [
+    new Audio("assets/kia.mp3"),
+    new Audio("assets/kia_tch.mp3")
+];
+
+hitSounds.forEach((sound) => {
+    sound.volume = 1.0;
+});
+
+let hitSoundIndex = 0;
 
 const hitSoundSpecial = new Audio("assets/kia2.mp3");
 hitSoundSpecial.volume = 1.0;
@@ -250,8 +258,12 @@ function playHitSound(grannyPhrase) {
         return;
     }
 
-    hitSound.currentTime = 0;
-    hitSound.play();
+    const sound = hitSounds[hitSoundIndex];
+
+    sound.currentTime = 0;
+    sound.play();
+
+    hitSoundIndex = (hitSoundIndex + 1) % hitSounds.length;
 }
 
 function playLevelUpSound() {
