@@ -997,3 +997,164 @@ button {
         font-size: 20px;
     }
 }
+
+
+.flappy-mode-btn {
+    position: absolute;
+    left: 24px;
+    top: 18px;
+    z-index: 70;
+
+    width: 58px;
+    height: 58px;
+
+    border: 5px solid #07443f;
+    border-radius: 18px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+
+    color: white;
+    font-size: 30px;
+    font-weight: 900;
+
+    box-shadow: 0 5px 0 #07312e;
+    text-shadow: 2px 2px 0 #00000066;
+    cursor: pointer;
+}
+
+.hud {
+    grid-template-columns: 58px 1fr;
+}
+
+.flappy-mode {
+    position: absolute;
+    inset: 0;
+    z-index: 300;
+    background: #8fd8f7;
+    overflow: hidden;
+}
+
+.flappy-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.flappy-top {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    z-index: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.flappy-back-btn {
+    width: 54px;
+    height: 54px;
+    border: 4px solid #07443f;
+    border-radius: 16px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    color: white;
+    font-size: 46px;
+    line-height: 34px;
+    font-weight: 900;
+    box-shadow: 0 5px 0 #07312e;
+    text-shadow: 2px 2px 0 #00000066;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.flappy-score {
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: linear-gradient(#1d8f89, #0f5e58);
+    border: 3px solid #07443f;
+    box-shadow: 0 5px 0 #07312e;
+    color: white;
+    font-size: 18px;
+    font-weight: 900;
+    text-shadow: 2px 2px 0 #00000066;
+}
+
+.flappy-start-screen,
+.flappy-game-over {
+    position: absolute;
+    inset: 0;
+    z-index: 330;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 26px;
+    text-align: center;
+    background: rgba(2, 6, 23, .35);
+    backdrop-filter: blur(3px);
+    pointer-events: none;
+}
+
+.flappy-title {
+    color: #fff04a;
+    font-size: 36px;
+    line-height: 1.05;
+    font-weight: 900;
+    -webkit-text-stroke: 2px #7c2d12;
+    text-shadow: 4px 4px 0 #3a1e0c, 0 8px 25px rgba(0,0,0,.45);
+    margin-bottom: 14px;
+}
+
+.flappy-subtitle {
+    max-width: 320px;
+    color: white;
+    font-size: 22px;
+    line-height: 1.18;
+    font-weight: 900;
+    text-shadow: 2px 2px 0 #00000066;
+    margin-bottom: 28px;
+}
+
+.flappy-start-btn {
+    min-width: 210px;
+    height: 72px;
+    border: 5px solid #8b4513;
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 34%),
+        linear-gradient(180deg, #ffe66d 0%, #ff9f1c 54%, #f97316 100%);
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 900;
+    box-shadow:
+        inset 0 3px 0 rgba(255,255,255,.65),
+        inset 0 -5px 0 rgba(154,69,16,.35),
+        0 8px 0 #6f320e,
+        0 18px 28px rgba(0,0,0,.28);
+    text-shadow:
+        0 2px 0 rgba(124,45,18,.95),
+        0 4px 8px rgba(0,0,0,.35);
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.flappy-start-btn:active,
+.flappy-mode-btn:active,
+.flappy-back-btn:active {
+    transform: scale(.96);
+    filter: brightness(.95);
+}
+
+@media (max-width: 390px) {
+    .flappy-title {
+        font-size: 32px;
+    }
+
+    .flappy-subtitle {
+        font-size: 20px;
+    }
+
+    .flappy-score {
+        font-size: 16px;
+        padding: 9px 11px;
+    }
+}
