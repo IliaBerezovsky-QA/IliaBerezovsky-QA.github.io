@@ -1042,9 +1042,12 @@ button {
 
 .flappy-mode {
     position: absolute;
-    inset: 0;
-    z-index: 300;
-    background: #8fd8f7;
+    left: 0;
+    top: -88px;
+    width: 100%;
+    height: calc(100% + 88px);
+    z-index: 500;
+    background: #020617;
     overflow: hidden;
 }
 
@@ -1539,4 +1542,152 @@ button {
 
 .berserk-notice {
     will-change: transform, opacity;
+}
+
+/* LARISA STABLE FIX v3.7 */
+body.larisa-mode-open .farm {
+    overflow: visible !important;
+}
+
+body.larisa-mode-open .hud {
+    visibility: hidden !important;
+}
+
+.flappy-mode {
+    position: absolute !important;
+    left: 0 !important;
+    top: -88px !important;
+    width: 100% !important;
+    height: calc(100% + 88px) !important;
+    z-index: 500 !important;
+    overflow: hidden !important;
+    background: #020617 !important;
+}
+
+.flappy-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    background: #020617;
+}
+
+.flappy-top {
+    position: absolute !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: max(12px, env(safe-area-inset-top)) !important;
+    z-index: 1200 !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto !important;
+}
+
+.flappy-back-btn,
+.flappy-start-btn {
+    pointer-events: auto !important;
+}
+
+.flappy-mode.flappy-idle .flappy-score {
+    display: none !important;
+}
+
+.flappy-mode.flappy-idle .flappy-canvas {
+    opacity: 0;
+}
+
+.flappy-start-screen {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 900 !important;
+    width: 100% !important;
+    height: 100% !important;
+    justify-content: flex-end !important;
+    padding: 92px 24px max(44px, env(safe-area-inset-bottom)) !important;
+    background: #020617 url("assets/onlarisa.png") center / cover no-repeat !important;
+    backdrop-filter: none !important;
+    pointer-events: auto !important;
+}
+
+.flappy-start-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(2,6,23,.14) 0%, rgba(2,6,23,0) 42%, rgba(2,6,23,.68) 100%);
+    pointer-events: none;
+}
+
+.flappy-start-screen .flappy-title,
+.flappy-start-screen .flappy-subtitle {
+    display: none !important;
+}
+
+.flappy-start-screen .flappy-start-btn {
+    position: relative;
+    z-index: 2;
+    min-width: 230px;
+    height: 78px;
+    font-size: 30px;
+}
+
+.flappy-game-over {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 910 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+}
+
+.flappy-game-over .flappy-start-btn {
+    pointer-events: auto !important;
+}
+
+
+/* LARISA NEW BADGE v5.1 */
+.larisa-new-badge {
+    position: absolute;
+    left: 78px;
+    top: 10px;
+
+    z-index: 270;
+
+    padding: 2px 8px;
+
+    border-radius: 10px;
+
+    background: #ef4444;
+    color: #fff;
+
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+
+    box-shadow: 0 0 10px rgba(239,68,68,.6);
+
+    animation:
+        larisaNewBlink 1.2s infinite,
+        larisaNewHide 0s linear 20s forwards;
+}
+
+@keyframes larisaNewBlink {
+    0%,100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: .45;
+        transform: scale(1.12);
+    }
+}
+
+@keyframes larisaNewHide {
+    to {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
 }

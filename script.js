@@ -181,6 +181,26 @@ let isMusicStarted = false;
 let flappyCtx = flappyCanvas ? flappyCanvas.getContext("2d") : null;
 const flappyLarisa = new Image();
 flappyLarisa.src = "assets/larisa.png";
+
+const flappyBackgrounds = [new Image(), new Image(), new Image()];
+flappyBackgrounds[0].src = "assets/fonlarisa1.png";
+flappyBackgrounds[1].src = "assets/fonlarisa2.png";
+flappyBackgrounds[2].src = "assets/fonlarisa3.png";
+
+const flappyShovel = new Image();
+flappyShovel.src = "assets/lopata.png";
+
+const flappyTreeOne = new Image();
+flappyTreeOne.src = "assets/el1.png";
+
+const flappyTreeTwo = new Image();
+flappyTreeTwo.src = "assets/el2.png";
+
+const flappyTreeFour = new Image();
+flappyTreeFour.src = "assets/el4.png";
+
+const flappyTreeMem = new Image();
+flappyTreeMem.src = "assets/elmem.png";
 let flappyAnimationId = null;
 let flappyRunning = false;
 let flappyBirdY = 220;
@@ -188,9 +208,16 @@ let flappyVelocity = 0;
 let flappyGravity = 0.42;
 let flappyJump = -7.2;
 let flappyPipes = [];
+let flappyMemDecorations = [];
+let flappyPipeSpawnCount = 0;
+let flappyLastEl4SpawnTime = 0;
+let flappyLastMemSpawnTime = 0;
+const FLAPPY_SPECIAL_DECOR_INTERVAL_MS = 20000;
 let flappyScore = 0;
 let flappyFrame = 0;
 let flappyBestScore = 0;
+let flappyStartTime = 0;
+let flappyStageIndex = 0;
 
 /* NEIGHBOR SUIKA MODE */
 
@@ -362,6 +389,9 @@ backBtn.addEventListener("click", () => {
     newspaperModal.classList.add("hidden");
     stopCrowFlight();
     stopFlappyGame();
+    const hud = document.querySelector(".hud");
+    if (hud) hud.style.visibility = "";
+    document.body.classList.remove("larisa-mode-open");
     if (flappyMode) flappyMode.classList.add("hidden");
     stopNeighborGame();
     if (neighborMode) neighborMode.classList.add("hidden");
@@ -1299,6 +1329,10 @@ function openFlappyMode() {
     stopCrowFlight();
     closeNeighborMode();
 
+    const hud = document.querySelector(".hud");
+    if (hud) hud.style.visibility = "hidden";
+    document.body.classList.add("larisa-mode-open");
+
     flappyMode.classList.remove("hidden");
     flappyStartScreen.classList.remove("hidden");
     flappyGameOver.classList.add("hidden");
@@ -1310,6 +1344,10 @@ function openFlappyMode() {
 
 function closeFlappyMode() {
     stopFlappyGame();
+
+    const hud = document.querySelector(".hud");
+    if (hud) hud.style.visibility = "";
+    document.body.classList.remove("larisa-mode-open");
 
     if (flappyMode) {
         flappyMode.classList.add("hidden");
@@ -1345,8 +1383,14 @@ function startFlappyGame() {
     flappyBirdY = flappyMode.getBoundingClientRect().height / 2;
     flappyVelocity = 0;
     flappyPipes = [];
+    flappyMemDecorations = [];
+    flappyPipeSpawnCount = 0;
+    flappyLastEl4SpawnTime = performance.now();
+    flappyLastMemSpawnTime = performance.now() - FLAPPY_SPECIAL_DECOR_INTERVAL_MS / 2;
     flappyScore = 0;
     flappyFrame = 0;
+    flappyStageIndex = 0;
+    flappyStartTime = performance.now();
 
     flappyScoreText.textContent = flappyScore;
     flappyStartScreen.classList.add("hidden");
@@ -1375,6 +1419,7 @@ function flappyLoop() {
     if (!flappyRunning) return;
 
     flappyFrame++;
+    updateFlappyStage();
     flappyVelocity += flappyGravity;
     flappyBirdY += flappyVelocity;
 
@@ -1393,27 +1438,74 @@ function flappyLoop() {
     flappyAnimationId = requestAnimationFrame(flappyLoop);
 }
 
+
+function updateFlappyStage() {
+    if (!flappyStartTime) {
+        flappyStageIndex = 0;
+        return;
+    }
+
+    const elapsed = performance.now() - flappyStartTime;
+
+    if (elapsed >= 120000) {
+        flappyStageIndex = 2;
+        return;
+    }
+
+    if (elapsed >= 60000) {
+        flappyStageIndex = 1;
+        return;
+    }
+
+    flappyStageIndex = 0;
+}
+
 function createFlappyPipe() {
     if (!flappyMode) return;
 
     const rect = flappyMode.getBoundingClientRect();
-    const gap = Math.max(150, Math.min(190, rect.height * 0.23));
-    const minTop = 90;
-    const maxTop = Math.max(minTop + 20, rect.height - gap - 125);
+    const gap = Math.max(115, Math.min(140, rect.height * 0.17));
+    const minTop = 140;
+    const maxTop = Math.max(minTop + 20, rect.height - gap - 190);
     const topHeight = random(minTop, Math.floor(maxTop));
 
+    flappyPipeSpawnCount++;
+
+    const now = performance.now();
+    const canUseEl4 = flappyStageIndex === 0 || flappyStageIndex === 2;
+    const canSpawnEl4 = canUseEl4 && now - flappyLastEl4SpawnTime >= FLAPPY_SPECIAL_DECOR_INTERVAL_MS;
+    const canSpawnMem = !canSpawnEl4 && now - flappyLastMemSpawnTime >= FLAPPY_SPECIAL_DECOR_INTERVAL_MS;
+    const isEl4Obstacle = canSpawnEl4;
+
+    if (isEl4Obstacle) {
+        flappyLastEl4SpawnTime = now;
+    }
+
     flappyPipes.push({
-        x: rect.width + 45,
+        x: rect.width + 70,
         topHeight,
         gap,
-        width: 74,
-        passed: false
+        width: 88,
+        passed: false,
+        grannyObstacle: isEl4Obstacle,
+        el4Obstacle: isEl4Obstacle,
+        stage: flappyStageIndex
     });
+
+    if (canSpawnMem) {
+        flappyLastMemSpawnTime = now;
+        flappyMemDecorations.push({
+            x: rect.width + 330,
+            y: rect.height + 82,
+            width: 130,
+            stage: flappyStageIndex
+        });
+    }
 }
 
 function updateFlappyPipes() {
     flappyPipes.forEach((pipe) => {
-        pipe.x -= 3.25;
+        pipe.x -= 4.35;
 
         if (!pipe.passed && pipe.x + pipe.width < 82) {
             pipe.passed = true;
@@ -1423,7 +1515,12 @@ function updateFlappyPipes() {
         }
     });
 
+    flappyMemDecorations.forEach((tree) => {
+        tree.x -= 4.35;
+    });
+
     flappyPipes = flappyPipes.filter((pipe) => pipe.x + pipe.width > -50);
+    flappyMemDecorations = flappyMemDecorations.filter((tree) => tree.x + tree.width > -50);
 }
 
 function drawFlappyIntro() {
@@ -1449,18 +1546,73 @@ function drawFlappyGame() {
     flappyCtx.clearRect(0, 0, width, height);
     drawFlappyBackground(width, height);
 
+    drawDecorativeTrees(width, height);
+    drawFlappyMemDecorations();
+
     flappyPipes.forEach((pipe) => {
-        drawFlappyObstacle(pipe.x, 0, pipe.width, pipe.topHeight, true);
-        drawFlappyObstacle(pipe.x, pipe.topHeight + pipe.gap, pipe.width, height - pipe.topHeight - pipe.gap, false);
+        drawFlappyObstacle(pipe.x, 0, pipe.width, pipe.topHeight, true, pipe.stage, pipe.grannyObstacle, pipe.el4Obstacle);
+        drawFlappyObstacle(pipe.x, pipe.topHeight + pipe.gap, pipe.width, height - pipe.topHeight - pipe.gap, false, pipe.stage, pipe.grannyObstacle, pipe.el4Obstacle);
     });
 
     drawFlappyLarisa(
         82,
         flappyBirdY,
-        72,
-        54,
+        78,
+        58,
         Math.max(-0.55, Math.min(0.75, flappyVelocity * 0.06))
     );
+}
+
+
+function drawDecorativeTrees(width, height) {
+    if (!flappyCtx) return;
+
+    const treeImage = flappyStageIndex === 1 ? flappyTreeTwo : flappyTreeOne;
+
+    if (!(treeImage.complete && treeImage.naturalWidth > 0)) {
+        return;
+    }
+
+    const trees = [
+        { x: width * 0.12, size: 120 },
+        { x: width * 0.33, size: 150 },
+        { x: width * 0.58, size: 110 },
+        { x: width * 0.82, size: 140 }
+    ];
+
+    trees.forEach((tree) => {
+        flappyCtx.drawImage(
+            treeImage,
+            tree.x - tree.size / 2,
+            height - tree.size * 0.8,
+            tree.size,
+            tree.size
+        );
+    });
+}
+
+function drawFlappyMemDecorations() {
+    if (!flappyCtx || !flappyMemDecorations.length) return;
+
+    flappyMemDecorations.forEach((tree) => {
+        if (flappyTreeMem.complete && flappyTreeMem.naturalWidth > 0) {
+            const ratio = flappyTreeMem.naturalHeight / flappyTreeMem.naturalWidth;
+            const treeWidth = tree.width;
+            const treeHeight = treeWidth * ratio;
+
+            flappyCtx.drawImage(
+                flappyTreeMem,
+                tree.x - treeWidth / 2,
+                tree.y - treeHeight,
+                treeWidth,
+                treeHeight
+            );
+        } else {
+            flappyCtx.font = "34px Arial";
+            flappyCtx.textAlign = "center";
+            flappyCtx.fillText("👵", tree.x, tree.y);
+        }
+    });
 }
 
 function drawFlappyLarisa(x, y, width, height, rotation) {
@@ -1489,46 +1641,84 @@ function drawFlappyLarisa(x, y, width, height, rotation) {
 }
 
 function drawFlappyBackground(width, height) {
-    const skyGradient = flappyCtx.createLinearGradient(0, 0, 0, height);
-    skyGradient.addColorStop(0, "#8fd8f7");
-    skyGradient.addColorStop(0.62, "#65c7f7");
-    skyGradient.addColorStop(1, "#4ade80");
+    const bg = flappyBackgrounds[flappyStageIndex] || flappyBackgrounds[0];
 
-    flappyCtx.fillStyle = skyGradient;
+    if (bg.complete && bg.naturalWidth > 0) {
+        drawCoverImage(flappyCtx, bg, 0, 0, width, height);
+    } else {
+        const skyGradient = flappyCtx.createLinearGradient(0, 0, 0, height);
+        skyGradient.addColorStop(0, "#7dd3fc");
+        skyGradient.addColorStop(0.62, "#65c7f7");
+        skyGradient.addColorStop(1, "#14532d");
+        flappyCtx.fillStyle = skyGradient;
+        flappyCtx.fillRect(0, 0, width, height);
+    }
+
+    flappyCtx.fillStyle = "rgba(2,6,23,.12)";
     flappyCtx.fillRect(0, 0, width, height);
-
-    flappyCtx.fillStyle = "rgba(255,255,255,.55)";
-    flappyCtx.beginPath();
-    flappyCtx.arc(width * 0.18, 120, 24, 0, Math.PI * 2);
-    flappyCtx.arc(width * 0.25, 118, 34, 0, Math.PI * 2);
-    flappyCtx.arc(width * 0.34, 124, 22, 0, Math.PI * 2);
-    flappyCtx.fill();
-
-    flappyCtx.beginPath();
-    flappyCtx.arc(width * 0.68, 180, 20, 0, Math.PI * 2);
-    flappyCtx.arc(width * 0.75, 178, 28, 0, Math.PI * 2);
-    flappyCtx.arc(width * 0.83, 184, 18, 0, Math.PI * 2);
-    flappyCtx.fill();
 }
 
-function drawFlappyObstacle(x, y, width, height, isTop) {
-    flappyCtx.fillStyle = "#5b3417";
-    flappyCtx.fillRect(x, y, width, height);
-
-    flappyCtx.fillStyle = "#3a1e0c";
+function drawFlappyObstacle(x, y, width, height, isTop, stage, grannyObstacle, el4Obstacle) {
+    if (!flappyCtx || height <= 0) return;
 
     if (isTop) {
-        flappyCtx.fillRect(x - 8, y + height - 20, width + 16, 20);
+        const shovelHeight = Math.max(150, height + 62);
+        const shovelWidth = Math.max(210, Math.min(280, shovelHeight * 0.5));
+        const shovelX = x + (width - shovelWidth) / 2;
+        const shovelY = y + height - shovelHeight + 22;
+
+        if (flappyShovel.complete && flappyShovel.naturalWidth > 0) {
+            flappyCtx.drawImage(flappyShovel, shovelX, shovelY, shovelWidth, shovelHeight);
+        } else {
+            flappyCtx.font = "62px Arial";
+            flappyCtx.textAlign = "center";
+            flappyCtx.fillText("🪓", x + width / 2, y + height - 18);
+        }
+        if (grannyObstacle) {
+            flappyCtx.font = "54px Arial";
+            flappyCtx.textAlign = "center";
+            flappyCtx.fillText("👵", x + width / 2, y + height - 60);
+        }
+        return;
+    }
+
+    const treeImage = el4Obstacle ? flappyTreeFour : (stage === 1 ? flappyTreeTwo : flappyTreeOne);
+    const treeWidth = Math.max(300, width * 3.0);
+    const treeHeight = Math.max(260, height + 110);
+    const treeX = x + (width - treeWidth) / 2;
+    const treeY = y - 22;
+
+    if (treeImage.complete && treeImage.naturalWidth > 0) {
+        flappyCtx.drawImage(treeImage, treeX, treeY, treeWidth, treeHeight);
+        if (grannyObstacle && !el4Obstacle) {
+            flappyCtx.font = "54px Arial";
+            flappyCtx.textAlign = "center";
+            flappyCtx.fillText("👵", x + width / 2, treeY + 50);
+        }
     } else {
-        flappyCtx.fillRect(x - 8, y, width + 16, 20);
+        flappyCtx.font = "72px Arial";
+        flappyCtx.textAlign = "center";
+        flappyCtx.fillText("🌲", x + width / 2, y + 70);
+    }
+}
+
+function drawCoverImage(ctx, image, x, y, width, height) {
+    const imageRatio = image.naturalWidth / image.naturalHeight;
+    const targetRatio = width / height;
+    let sourceX = 0;
+    let sourceY = 0;
+    let sourceW = image.naturalWidth;
+    let sourceH = image.naturalHeight;
+
+    if (imageRatio > targetRatio) {
+        sourceW = image.naturalHeight * targetRatio;
+        sourceX = (image.naturalWidth - sourceW) / 2;
+    } else {
+        sourceH = image.naturalWidth / targetRatio;
+        sourceY = (image.naturalHeight - sourceH) / 2;
     }
 
-    flappyCtx.font = "28px Arial";
-    flappyCtx.textAlign = "center";
-
-    for (let i = y + 42; i < y + height - 20; i += 58) {
-        flappyCtx.fillText("🪵", x + width / 2, i);
-    }
+    ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, x, y, width, height);
 }
 
 function checkFlappyCollision() {
@@ -1537,17 +1727,31 @@ function checkFlappyCollision() {
     const rect = flappyMode.getBoundingClientRect();
     const birdX = 82;
     const birdY = flappyBirdY;
-    const radius = 18;
 
-    if (birdY - radius < 0 || birdY + radius > rect.height) {
+    // Реальная Лариса визуально больше, но для честной игры хитбокс меньше.
+    // Иначе проигрыш засчитывался до видимого касания.
+    const birdRadiusX = 10;
+    const birdRadiusY = 12;
+
+    if (birdY - birdRadiusY < 4 || birdY + birdRadiusY > rect.height - 4) {
         return true;
     }
 
     return flappyPipes.some((pipe) => {
-        const inPipeX = birdX + radius > pipe.x && birdX - radius < pipe.x + pipe.width;
-        const hitTop = birdY - radius < pipe.topHeight;
-        const hitBottom = birdY + radius > pipe.topHeight + pipe.gap;
-        return inPipeX && (hitTop || hitBottom);
+        // Визуально лопаты и елки широкие, но зона столкновения уже.
+        const hitboxPaddingX = 42;
+        const hitboxPaddingY = 42;
+
+        const inObstacleX =
+            birdX + birdRadiusX > pipe.x + hitboxPaddingX &&
+            birdX - birdRadiusX < pipe.x + pipe.width - hitboxPaddingX;
+
+        if (!inObstacleX) return false;
+
+        const hitTop = birdY - birdRadiusY < pipe.topHeight - hitboxPaddingY;
+        const hitBottom = birdY + birdRadiusY > pipe.topHeight + pipe.gap + hitboxPaddingY;
+
+        return hitTop || hitBottom;
     });
 }
 
@@ -1560,7 +1764,7 @@ function endFlappyGame() {
         const subtitle = flappyGameOver.querySelector(".flappy-subtitle");
 
         if (subtitle) {
-            subtitle.textContent = `Уклонений: ${flappyScore}. Рекорд: ${flappyBestScore}. Лариса требует реванш.`;
+            subtitle.textContent = `Уклонений: ${flappyScore}. Рекорд: ${flappyBestScore}. Лариса почти нашла новый урожай.`;
         }
     }
 }
@@ -2288,5 +2492,5 @@ document.addEventListener("click", (event) => {
 updateUI();
 
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js");
+    navigator.serviceWorker.register("./sw.js?v=5.1");
 }
