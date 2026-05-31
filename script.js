@@ -882,6 +882,16 @@ function startBerserkMode() {
 function hitBerserkCrow() {
     if (!isBerserkActive || isBerserkShotAnimating) return;
 
+    if (berserkFlash) {
+        berserkFlash.classList.add("hidden");
+        berserkFlash.classList.remove("run");
+    }
+
+    if (berserkNotice) {
+        berserkNotice.classList.add("hidden");
+        berserkNotice.classList.remove("show");
+    }
+
     isBerserkShotAnimating = true;
     berserkHitCount++;
     berserkShotIndex = 0;
