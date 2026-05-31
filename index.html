@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="assets/icon.png">
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=5.5">
+    <link rel="stylesheet" href="style.css?v=6.0">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
                 <div id="pawTrack" class="paw-track"></div>
 
                 <div class="creator-sign">
-                    created by iBerezovski ver.047
+                    created by iBerezovski ver.049
                 </div>
 
                 <img
@@ -121,27 +121,27 @@
                         <button id="neighborBackBtn" class="neighbor-back-btn" type="button">‹</button>
 
                         <div class="neighbor-score">
-                            Урожай: <span id="neighborDistance">0</span>
+                            <span id="neighborDistance">0</span> овощей
                         </div>
                     </div>
 
                     <canvas id="neighborCanvas" class="neighbor-canvas"></canvas>
 
                     <div id="neighborStartScreen" class="neighbor-start-screen">
-                        <div class="neighbor-title">🥒 Дедова Suika</div>
-                        <div class="neighbor-subtitle">Соединяй одинаковые овощи, выращивай огромный урожай и доберись до домика 🏡.</div>
+                        <div class="neighbor-title">История соседа</div>
+                        <div class="neighbor-subtitle">Собирай овощи, соединяй одинаковые и не дай урожаю завалить участок.</div>
                         <button id="neighborStartBtn" class="neighbor-start-btn" type="button">Погнали</button>
                     </div>
 
                     <div id="neighborGameOver" class="neighbor-game-over hidden">
-                        <div class="neighbor-title">Урожай завалил участок</div>
-                        <div class="neighbor-subtitle">Дед не успел разложить овощи по грядкам.</div>
+                        <div class="neighbor-title">Участок завален</div>
+                        <div class="neighbor-subtitle">Сосед не успел разобрать урожай.</div>
                         <button id="neighborRestartBtn" class="neighbor-start-btn" type="button">Еще раз</button>
                     </div>
 
                     <div id="neighborWinScreen" class="neighbor-game-over hidden">
-                        <div class="neighbor-title">Домик выращен!</div>
-                        <div class="neighbor-subtitle">Дед вырастил домик прямо из урожая.</div>
+                        <div class="neighbor-title">Урожай победил!</div>
+                        <div class="neighbor-subtitle">Сосед собрал легендарный урожай.</div>
                         <button id="neighborWinRestartBtn" class="neighbor-start-btn" type="button">Погнали снова</button>
                     </div>
 
@@ -330,7 +330,7 @@
 
     </div>
 
-    <script src="script.js?v=5.5"></script>
+    <script src="script.js?v=6.0"></script>
 
 </body>
 </html>

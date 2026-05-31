@@ -226,6 +226,13 @@ let flappyStageIndex = 0;
 /* NEIGHBOR SUIKA MODE */
 
 let neighborCtx = neighborCanvas ? neighborCanvas.getContext("2d") : null;
+const neighborBackgroundImage = new Image();
+neighborBackgroundImage.src = "assets/sosedfon.png";
+neighborBackgroundImage.onerror = () => {
+    if (!neighborBackgroundImage.src.includes("sosedfon.jpg")) {
+        neighborBackgroundImage.src = "assets/sosedfon.jpg";
+    }
+};
 let neighborAnimationId = null;
 let neighborRunning = false;
 let neighborDistance = 0;
@@ -240,6 +247,7 @@ let neighborFruits = [];
 let neighborParticles = [];
 let neighborShake = 0;
 let neighborDangerTime = 0;
+let neighborLastDropAt = 0;
 
 const neighborControls = {
     left: false,
@@ -260,29 +268,29 @@ const neighborSuika = {
     level: 1,
     gameOverLine: 0,
     canDrop: true,
-    dropCooldown: 0
+    dropCooldown: 0,
+    autoDropMs: 5000
 };
 
 const neighborFruitTypes = [
-    { icon: "🫐", name: "ягода", radius: 16, score: 8 },
-    { icon: "🍒", name: "вишня", radius: 19, score: 14 },
-    { icon: "🍅", name: "томат", radius: 23, score: 24 },
-    { icon: "🥔", name: "картошка", radius: 27, score: 42 },
-    { icon: "🥒", name: "огурец", radius: 32, score: 75 },
-    { icon: "🌽", name: "кукуруза", radius: 38, score: 120 },
-    { icon: "🍆", name: "баклажан", radius: 45, score: 190 },
-    { icon: "🎃", name: "тыква", radius: 54, score: 300 },
-    { icon: "🏡", name: "домик", radius: 64, score: 500 }
+    { icon: "🧄", name: "чеснок", radius: 14, score: 1 },
+    { icon: "🍅", name: "томат", radius: 18, score: 2 },
+    { icon: "🥔", name: "картошка", radius: 22, score: 4 },
+    { icon: "🥕", name: "морковка", radius: 26, score: 8 },
+    { icon: "🥒", name: "огурец", radius: 31, score: 16 },
+    { icon: "🍆", name: "баклажан", radius: 37, score: 32 },
+    { icon: "🌽", name: "кукуруза", radius: 44, score: 64 },
+    { icon: "🥬", name: "капуста", radius: 52, score: 128 },
+    { icon: "🎃", name: "тыква", radius: 62, score: 256 },
+    { icon: "🍉", name: "арбуз", radius: 74, score: 512 }
 ];
 
 const neighborDedPhrases = [
-    "Скрещиваем кабачки!",
-    "Дача растет!",
     "Овощ к овощу!",
-    "Вот это урожайная физика!",
-    "Лариса, не трогай тыкву!",
-    "Сейчас будет домик!",
-    "Суета на грядке!"
+    "Сосед не сдаётся!",
+    "Урожай давит!",
+    "Тыква пошла в атаку!",
+    "Грядка кипит!"
 ];
 
 let neighborDedPhrase = "Собери огромный урожай!";
@@ -396,6 +404,7 @@ backBtn.addEventListener("click", () => {
     const hud = document.querySelector(".hud");
     if (hud) hud.style.visibility = "";
     document.body.classList.remove("larisa-mode-open");
+    document.body.classList.remove("neighbor-mode-open");
     if (flappyMode) flappyMode.classList.add("hidden");
     stopNeighborGame();
     if (neighborMode) neighborMode.classList.add("hidden");
@@ -1926,6 +1935,7 @@ function openNeighborMode() {
     stopCrowFlight();
     closeFlappyMode();
 
+    document.body.classList.add("neighbor-mode-open");
     neighborMode.classList.remove("hidden");
     neighborStartScreen.classList.remove("hidden");
     neighborGameOver.classList.add("hidden");
@@ -1938,6 +1948,8 @@ function openNeighborMode() {
 
 function closeNeighborMode() {
     stopNeighborGame();
+
+    document.body.classList.remove("neighbor-mode-open");
 
     if (neighborMode) {
         neighborMode.classList.add("hidden");
@@ -1970,11 +1982,14 @@ function resizeNeighborCanvas() {
 function calculateNeighborSuikaSize(width, height) {
     neighborSuika.width = width;
     neighborSuika.height = height;
-    neighborSuika.bowlW = Math.min(width - 34, 390);
-    neighborSuika.bowlH = Math.min(height - 190, 640);
+    neighborSuika.bowlW = Math.min(width - 64, 352);
+    neighborSuika.bowlH = Math.min(height * 0.46, 410);
     neighborSuika.bowlX = Math.floor((width - neighborSuika.bowlW) / 2);
-    neighborSuika.bowlY = 112;
-    neighborSuika.gameOverLine = neighborSuika.bowlY + 74;
+    neighborSuika.bowlY = Math.floor(height - neighborSuika.bowlH - Math.max(52, height * 0.06));
+
+    // Линия проигрыша теперь реально привязана к верхней части ведра.
+    // Если любой старый овощ пересек эту линию - быстро считаем переполнение.
+    neighborSuika.gameOverLine = neighborSuika.bowlY + 36;
     neighborDropperX = width / 2;
 }
 
@@ -1990,6 +2005,7 @@ function startNeighborGame() {
     neighborDistance = 0;
     neighborDangerTime = 0;
     neighborShake = 0;
+    neighborLastDropAt = performance.now();
     neighborFruits = [];
     neighborParticles = [];
 
@@ -1999,8 +2015,8 @@ function startNeighborGame() {
     neighborSuika.canDrop = true;
     neighborSuika.dropCooldown = 0;
 
-    neighborCurrentFruit = random(0, 3);
-    neighborNextFruit = random(0, 3);
+    neighborCurrentFruit = random(1, 5);
+    neighborNextFruit = random(1, 5);
     neighborDedPhrase = "Собери огромный урожай!";
 
     neighborDistanceText.textContent = "0";
@@ -2056,7 +2072,12 @@ function updateNeighborSuika(step) {
 
     if (neighborControls.left) neighborDropperX -= moveSpeed;
     if (neighborControls.right) neighborDropperX += moveSpeed;
-    if (neighborControls.drop && s.canDrop) dropNeighborFruit();
+    if (neighborControls.drop && s.canDrop) dropNeighborFruit(true);
+
+    const now = performance.now();
+    if (s.canDrop && neighborLastDropAt && now - neighborLastDropAt >= s.autoDropMs) {
+        dropNeighborFruit(false);
+    }
 
     clampNeighborDropper();
 
@@ -2065,8 +2086,8 @@ function updateNeighborSuika(step) {
         if (s.dropCooldown <= 0) s.canDrop = true;
     }
 
-    const gravity = 0.34 * step;
-    const damping = 0.986;
+    const gravity = 0.50 * step;
+    const damping = 0.935;
 
     neighborFruits.forEach((fruit) => {
         fruit.vy += gravity;
@@ -2074,12 +2095,20 @@ function updateNeighborSuika(step) {
         fruit.y += fruit.vy * step;
         fruit.rotation += fruit.vr * step;
         fruit.vx *= damping;
-        fruit.vy *= 0.997;
-        fruit.settledFrames = Math.abs(fruit.vx) + Math.abs(fruit.vy) < 0.35 ? fruit.settledFrames + 1 : 0;
+        fruit.vy *= 0.965;
+
+        if (Math.abs(fruit.vx) + Math.abs(fruit.vy) < 0.72) {
+            fruit.vx *= 0.82;
+            fruit.vy *= 0.82;
+            fruit.vr *= 0.86;
+            fruit.settledFrames += 1;
+        } else {
+            fruit.settledFrames = 0;
+        }
         resolveNeighborWallCollision(fruit);
     });
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
         resolveNeighborFruitCollisions();
     }
 
@@ -2096,7 +2125,7 @@ function clampNeighborDropper() {
     neighborDropperX = Math.max(minX, Math.min(maxX, neighborDropperX));
 }
 
-function dropNeighborFruit() {
+function dropNeighborFruit(isManualDrop = true) {
     const s = neighborSuika;
     if (!s.canDrop) return;
 
@@ -2106,10 +2135,10 @@ function dropNeighborFruit() {
         type: neighborCurrentFruit,
         icon: type.icon,
         radius: type.radius,
-        x: neighborDropperX,
-        y: s.bowlY + 28,
-        vx: random(-8, 8) / 30,
-        vy: 1.2,
+        x: Math.max(s.bowlX + type.radius + 8, Math.min(s.bowlX + s.bowlW - type.radius - 8, neighborDropperX + random(-10, 10))),
+        y: s.bowlY - type.radius - 18,
+        vx: random(-12, 12) / 28,
+        vy: 1.9,
         rotation: random(-20, 20) / 100,
         vr: random(-7, 7) / 100,
         merged: false,
@@ -2119,9 +2148,11 @@ function dropNeighborFruit() {
 
     neighborFruits.push(fruit);
     s.canDrop = false;
-    s.dropCooldown = 18;
+    s.dropCooldown = 9;
+    neighborLastDropAt = performance.now();
     neighborCurrentFruit = neighborNextFruit;
-    neighborNextFruit = random(0, Math.min(4, 2 + s.level));
+    neighborNextFruit = random(1, Math.min(7, 4 + Math.floor(s.level / 2)));
+    neighborDropperX = random(s.bowlX + 34, s.bowlX + s.bowlW - 34);
 }
 
 function resolveNeighborWallCollision(fruit) {
@@ -2132,19 +2163,19 @@ function resolveNeighborWallCollision(fruit) {
 
     if (fruit.x < left) {
         fruit.x = left;
-        fruit.vx = Math.abs(fruit.vx) * 0.55;
+        fruit.vx = Math.abs(fruit.vx) * 0.18;
     }
 
     if (fruit.x > right) {
         fruit.x = right;
-        fruit.vx = -Math.abs(fruit.vx) * 0.55;
+        fruit.vx = -Math.abs(fruit.vx) * 0.18;
     }
 
     if (fruit.y > bottom) {
         fruit.y = bottom;
-        fruit.vy = -Math.abs(fruit.vy) * 0.22;
-        fruit.vx *= 0.82;
-        fruit.vr *= 0.85;
+        fruit.vy = -Math.abs(fruit.vy) * 0.02;
+        fruit.vx *= 0.46;
+        fruit.vr *= 0.42;
     }
 }
 
@@ -2178,7 +2209,7 @@ function resolveNeighborFruitCollisions() {
             b.x += nx * overlap;
             b.y += ny * overlap;
 
-            const push = 0.045;
+            const push = 0.016;
             a.vx -= nx * push;
             a.vy -= ny * push;
             b.vx += nx * push;
@@ -2209,7 +2240,7 @@ function mergeNeighborFruits(a, b) {
         x,
         y,
         vx: (a.vx + b.vx) * 0.25,
-        vy: -1.6,
+        vy: -0.35,
         rotation: 0,
         vr: random(-8, 8) / 100,
         merged: false,
@@ -2219,17 +2250,19 @@ function mergeNeighborFruits(a, b) {
 
     neighborSuika.merges++;
     neighborSuika.score += type.score;
-    neighborSuika.level = Math.floor(neighborSuika.merges / 5) + 1;
+    neighborSuika.level = Math.floor(neighborSuika.merges / 2) + 1;
     neighborDistance = neighborSuika.score;
     neighborBestDistance = Math.max(neighborBestDistance, neighborDistance);
     neighborDistanceText.textContent = neighborSuika.score;
     neighborDedPhrase = getRandomItem(neighborDedPhrases);
-    neighborShake = Math.min(12, 5 + newType);
+    neighborShake = Math.min(4, 1 + newType * 0.35);
 
     createNeighborMergeParticles(x, y, type.icon, newType);
 
+    // Максимальный овощ больше не завершает игру победой.
+    // Игра продолжается, пока участок реально не переполнится.
     if (newType >= neighborFruitTypes.length - 1) {
-        endNeighborGame(true);
+        neighborDedPhrase = "Вот это урожай! Продолжаем!";
     }
 }
 
@@ -2261,18 +2294,23 @@ function updateNeighborParticles(step) {
 
 function updateNeighborDanger(step) {
     const now = performance.now();
+
     const risky = neighborFruits.some((fruit) => {
-        const oldEnough = now - fruit.bornAt > 2200;
-        return oldEnough && fruit.y - fruit.radius < neighborSuika.gameOverLine && fruit.settledFrames > 40;
+        const oldEnough = now - fruit.bornAt > 650;
+        const reachedTopLine = fruit.y - fruit.radius <= neighborSuika.gameOverLine;
+        const visiblyOutsideBucket = fruit.y + fruit.radius * 0.35 <= neighborSuika.bowlY + 12;
+        return oldEnough && (reachedTopLine || visiblyOutsideBucket);
     });
 
     if (risky) {
         neighborDangerTime += step;
     } else {
-        neighborDangerTime = Math.max(0, neighborDangerTime - step * 2.2);
+        neighborDangerTime = Math.max(0, neighborDangerTime - step * 1.6);
     }
 
-    if (neighborDangerTime > 150) {
+    // Примерно 0.45 секунды над линией - проигрыш.
+    // Так овощ не обязан полностью остановиться, чтобы игра закончилась.
+    if (neighborDangerTime > 27) {
         endNeighborGame(false);
     }
 }
@@ -2283,20 +2321,6 @@ function drawNeighborIntro() {
     const rect = neighborMode.getBoundingClientRect();
     drawNeighborBackground(rect.width, rect.height);
     drawNeighborBowl();
-    drawNeighborGrandpa(rect.width, rect.height);
-
-    neighborCtx.save();
-    neighborCtx.fillStyle = "rgba(255,255,255,.9)";
-    neighborCtx.strokeStyle = "#5b3417";
-    neighborCtx.lineWidth = 5;
-    roundRect(neighborCtx, 28, rect.height - 216, rect.width - 56, 92, 22, true, true);
-    neighborCtx.fillStyle = "#3a1e0c";
-    neighborCtx.font = "900 17px Arial";
-    neighborCtx.textAlign = "center";
-    neighborCtx.fillText("Соединяй одинаковые овощи", rect.width / 2, rect.height - 176);
-    neighborCtx.font = "900 14px Arial";
-    neighborCtx.fillText("Цель: вырастить домик 🏡", rect.width / 2, rect.height - 150);
-    neighborCtx.restore();
 }
 
 function drawNeighborGame() {
@@ -2317,35 +2341,23 @@ function drawNeighborGame() {
     drawNeighborFruits();
     drawNeighborDropper();
     drawNeighborParticles();
-    drawNeighborGrandpa(width, height);
-    drawNeighborHud(width, height);
     neighborCtx.restore();
 }
 
 function drawNeighborBackground(width, height) {
-    const gradient = neighborCtx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "#7dd3fc");
-    gradient.addColorStop(0.46, "#bbf7d0");
-    gradient.addColorStop(1, "#4d7c0f");
+    if (neighborBackgroundImage.complete && neighborBackgroundImage.naturalWidth > 0) {
+        drawCoverImage(neighborCtx, neighborBackgroundImage, 0, 0, width, height);
+    } else {
+        const gradient = neighborCtx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, "#7dd3fc");
+        gradient.addColorStop(0.58, "#bbf7d0");
+        gradient.addColorStop(1, "#365314");
+        neighborCtx.fillStyle = gradient;
+        neighborCtx.fillRect(0, 0, width, height);
+    }
 
-    neighborCtx.fillStyle = gradient;
+    neighborCtx.fillStyle = "rgba(2, 6, 23, .08)";
     neighborCtx.fillRect(0, 0, width, height);
-
-    neighborCtx.fillStyle = "rgba(255,255,255,.55)";
-    for (let i = 0; i < 5; i++) {
-        const x = (i * 135 + neighborFrame * 0.2) % (width + 130) - 80;
-        const y = 92 + i * 12 + Math.sin((neighborFrame + i * 31) / 34) * 8;
-        drawNeighborCloud(x, y);
-    }
-
-    neighborCtx.fillStyle = "rgba(91,52,23,.92)";
-    neighborCtx.fillRect(0, height - 24, width, 24);
-
-    neighborCtx.fillStyle = "rgba(255,255,255,.18)";
-    for (let i = 0; i < 18; i++) {
-        const x = (i * 29 + neighborFrame * 0.35) % width;
-        neighborCtx.fillText("🌱", x, height - 34 - (i % 3) * 8);
-    }
 }
 
 function drawNeighborCloud(x, y) {
@@ -2360,67 +2372,59 @@ function drawNeighborBowl() {
     const s = neighborSuika;
 
     neighborCtx.save();
-    neighborCtx.fillStyle = "rgba(255, 247, 214, .7)";
-    neighborCtx.strokeStyle = "#5b3417";
-    neighborCtx.lineWidth = 7;
-    roundRect(neighborCtx, s.bowlX, s.bowlY, s.bowlW, s.bowlH, 26, true, true);
 
-    neighborCtx.fillStyle = "rgba(255,255,255,.22)";
-    roundRect(neighborCtx, s.bowlX + 10, s.bowlY + 10, s.bowlW - 20, s.bowlH - 20, 20, true, false);
+    // Прозрачное ведро: чуть выше, с толстыми стеклянными стенками и видимой кромкой.
+    const glassGradient = neighborCtx.createLinearGradient(0, s.bowlY, 0, s.bowlY + s.bowlH);
+    glassGradient.addColorStop(0, "rgba(255,255,255,.20)");
+    glassGradient.addColorStop(0.5, "rgba(255,255,255,.10)");
+    glassGradient.addColorStop(1, "rgba(255,255,255,.18)");
 
-    neighborCtx.strokeStyle = "rgba(91,52,23,.12)";
-    neighborCtx.lineWidth = 1;
-    for (let y = s.bowlY + 38; y < s.bowlY + s.bowlH - 20; y += 38) {
-        neighborCtx.beginPath();
-        neighborCtx.moveTo(s.bowlX + 14, y);
-        neighborCtx.lineTo(s.bowlX + s.bowlW - 14, y);
-        neighborCtx.stroke();
-    }
+    neighborCtx.fillStyle = glassGradient;
+    neighborCtx.strokeStyle = "rgba(255,255,255,.76)";
+    neighborCtx.lineWidth = 4;
+    roundRect(neighborCtx, s.bowlX, s.bowlY, s.bowlW, s.bowlH, 22, true, true);
+
+    neighborCtx.strokeStyle = "rgba(255,255,255,.42)";
+    neighborCtx.lineWidth = 2;
+    roundRect(neighborCtx, s.bowlX + 9, s.bowlY + 9, s.bowlW - 18, s.bowlH - 18, 18, false, true);
+
+    neighborCtx.fillStyle = "rgba(255,255,255,.18)";
+    roundRect(neighborCtx, s.bowlX + 12, s.bowlY + 12, s.bowlW - 24, 22, 11, true, false);
+
+    neighborCtx.fillStyle = "rgba(255,255,255,.06)";
+    roundRect(neighborCtx, s.bowlX + 16, s.bowlY + 48, s.bowlW - 32, s.bowlH - 64, 14, true, false);
 
     neighborCtx.restore();
 }
 
 function drawNeighborDangerLine() {
     const s = neighborSuika;
-    const alpha = neighborDangerTime > 0 ? 0.75 + Math.sin(neighborFrame / 5) * 0.2 : 0.34;
+    const alpha = neighborDangerTime > 0 ? 0.82 + Math.sin(neighborFrame / 5) * 0.16 : 0.34;
 
     neighborCtx.save();
-    neighborCtx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
-    neighborCtx.setLineDash([8, 8]);
+    neighborCtx.strokeStyle = `rgba(255, 80, 80, ${alpha})`;
+    neighborCtx.setLineDash([10, 8]);
     neighborCtx.lineWidth = 3;
     neighborCtx.beginPath();
     neighborCtx.moveTo(s.bowlX + 12, s.gameOverLine);
     neighborCtx.lineTo(s.bowlX + s.bowlW - 12, s.gameOverLine);
     neighborCtx.stroke();
     neighborCtx.setLineDash([]);
-    neighborCtx.fillStyle = `rgba(127, 29, 29, ${alpha})`;
-    neighborCtx.font = "900 12px Arial";
-    neighborCtx.textAlign = "right";
-    neighborCtx.fillText("опасная грядка", s.bowlX + s.bowlW - 16, s.gameOverLine - 8);
     neighborCtx.restore();
 }
 
 function drawNeighborDropper() {
     const s = neighborSuika;
     const type = neighborFruitTypes[neighborCurrentFruit];
-    const y = s.bowlY + 32;
+    const y = Math.max(118, s.bowlY - 150);
 
     neighborCtx.save();
-    neighborCtx.strokeStyle = "rgba(58,30,12,.38)";
-    neighborCtx.lineWidth = 3;
+    neighborCtx.strokeStyle = "rgba(255,255,255,.28)";
+    neighborCtx.lineWidth = 2;
     neighborCtx.beginPath();
-    neighborCtx.moveTo(neighborDropperX, s.bowlY + 2);
-    neighborCtx.lineTo(neighborDropperX, y + type.radius + 14);
+    neighborCtx.moveTo(neighborDropperX, 92);
+    neighborCtx.lineTo(neighborDropperX, y + type.radius + 10);
     neighborCtx.stroke();
-
-    neighborCtx.fillStyle = "rgba(255,255,255,.9)";
-    neighborCtx.strokeStyle = "#5b3417";
-    neighborCtx.lineWidth = 4;
-    roundRect(neighborCtx, neighborDropperX - 42, s.bowlY - 48, 84, 40, 17, true, true);
-    neighborCtx.fillStyle = "#3a1e0c";
-    neighborCtx.font = "900 12px Arial";
-    neighborCtx.textAlign = "center";
-    neighborCtx.fillText(`Дальше ${neighborFruitTypes[neighborNextFruit].icon}`, neighborDropperX, s.bowlY - 23);
 
     drawNeighborFruitIcon(type.icon, neighborDropperX, y, type.radius, 0, true);
     neighborCtx.restore();
@@ -2437,18 +2441,27 @@ function drawNeighborFruitIcon(icon, x, y, radius, rotation, ghost) {
     neighborCtx.translate(x, y);
     neighborCtx.rotate(rotation);
 
-    neighborCtx.fillStyle = ghost ? "rgba(255,255,255,.55)" : "rgba(255,255,255,.82)";
-    neighborCtx.strokeStyle = "rgba(91,52,23,.55)";
-    neighborCtx.lineWidth = Math.max(2, radius * 0.08);
-    neighborCtx.beginPath();
-    neighborCtx.arc(0, 0, radius, 0, Math.PI * 2);
-    neighborCtx.fill();
-    neighborCtx.stroke();
+    neighborCtx.globalAlpha = ghost ? .92 : 1;
 
-    neighborCtx.font = `${Math.floor(radius * 1.45)}px Arial`;
+    const glowRadius = radius * (ghost ? 1.15 : 1.22);
+    const glow = neighborCtx.createRadialGradient(0, 0, radius * 0.12, 0, 0, glowRadius);
+    glow.addColorStop(0, ghost ? "rgba(255,255,255,.62)" : "rgba(255,255,255,.78)");
+    glow.addColorStop(0.58, ghost ? "rgba(255,247,214,.32)" : "rgba(255,247,214,.46)");
+    glow.addColorStop(1, "rgba(255,247,214,0)");
+    neighborCtx.fillStyle = glow;
+    neighborCtx.beginPath();
+    neighborCtx.arc(0, 0, glowRadius, 0, Math.PI * 2);
+    neighborCtx.fill();
+
+    neighborCtx.shadowColor = "rgba(0,0,0,.88)";
+    neighborCtx.shadowBlur = ghost ? 10 : 16;
+    neighborCtx.shadowOffsetY = ghost ? 4 : 8;
+    neighborCtx.filter = ghost ? "saturate(1.45) brightness(1.12) contrast(1.08)" : "saturate(1.75) brightness(1.16) contrast(1.12)";
+    neighborCtx.font = `${Math.floor(radius * 2.0)}px Arial`;
     neighborCtx.textAlign = "center";
     neighborCtx.textBaseline = "middle";
     neighborCtx.fillText(icon, 0, 2);
+
     neighborCtx.restore();
 }
 
@@ -2555,7 +2568,7 @@ function endNeighborGame(isWin) {
         const subtitle = neighborWinScreen.querySelector(".neighbor-subtitle");
 
         if (subtitle) {
-            subtitle.textContent = `Очки: ${neighborSuika.score}. Дед вырастил домик из урожая.`;
+            subtitle.textContent = `Собрано овощей: ${neighborSuika.score}. Сосед доволен урожаем.`;
         }
         return;
     }
@@ -2565,7 +2578,7 @@ function endNeighborGame(isWin) {
     const subtitle = neighborGameOver.querySelector(".neighbor-subtitle");
 
     if (subtitle) {
-        subtitle.textContent = `Очки: ${neighborSuika.score}. Рекорд: ${neighborBestDistance}. Участок завалило урожаем.`;
+        subtitle.textContent = `Собрано овощей: ${neighborSuika.score}. Рекорд: ${neighborBestDistance}. Участок завалило урожаем.`;
     }
 }
 
@@ -2611,5 +2624,5 @@ document.addEventListener("click", (event) => {
 updateUI();
 
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js?v=5.5");
+    navigator.serviceWorker.register("./sw.js?v=6.0");
 }

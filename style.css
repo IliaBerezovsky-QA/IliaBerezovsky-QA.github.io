@@ -2028,3 +2028,150 @@ body.larisa-mode-open .hud {
     text-shadow: 2px 2px 0 #3a1e0c, 0 6px 14px rgba(0,0,0,.6);
 }
 }
+
+/* SOSED SUIKA MODE v5.8 */
+body.neighbor-mode-open .hud {
+    visibility: hidden !important;
+}
+
+body.neighbor-mode-open .farm {
+    overflow: visible !important;
+}
+
+.neighbor-mode {
+    position: absolute !important;
+    left: 0 !important;
+    top: -88px !important;
+    width: 100% !important;
+    height: calc(100% + 88px) !important;
+    z-index: 520 !important;
+    background: #020617 url("assets/sosedfon.png") center / cover no-repeat !important;
+    overflow: hidden !important;
+}
+
+.neighbor-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    background: transparent;
+    touch-action: none;
+}
+
+.neighbor-top {
+    left: 0 !important;
+    right: 0 !important;
+    top: max(12px, env(safe-area-inset-top)) !important;
+    justify-content: center !important;
+    z-index: 1250 !important;
+    pointer-events: none !important;
+}
+
+.neighbor-top .neighbor-score {
+    pointer-events: none !important;
+}
+
+.neighbor-back-btn {
+    position: absolute !important;
+    left: 14px !important;
+    top: max(12px, env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 16px !important;
+    opacity: .92 !important;
+    z-index: 1300 !important;
+    pointer-events: auto !important;
+}
+
+.neighbor-score {
+    min-width: 150px !important;
+    padding: 9px 18px !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,0) 38%),
+        linear-gradient(180deg, rgba(91,52,23,.92), rgba(58,30,12,.92)) !important;
+    border: 3px solid rgba(255, 214, 120, .72) !important;
+    box-shadow: 0 6px 0 rgba(58,30,12,.76), 0 14px 24px rgba(0,0,0,.34) !important;
+    color: #fff7d6 !important;
+    font-size: 18px !important;
+    text-align: center !important;
+    text-shadow: 2px 2px 0 #3a1e0c !important;
+}
+
+.neighbor-score span {
+    color: #fff04a;
+    font-size: 30px;
+    line-height: .95;
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.neighbor-start-screen {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 1100 !important;
+    width: 100% !important;
+    height: 100% !important;
+    justify-content: flex-end !important;
+    padding: 92px 24px max(44px, env(safe-area-inset-bottom)) !important;
+    background:
+        linear-gradient(180deg, rgba(2,6,23,.08) 0%, rgba(2,6,23,0) 44%, rgba(2,6,23,.64) 100%),
+        url("assets/sosed.png") center / cover no-repeat,
+        url("assets/sosed.jpg") center / cover no-repeat !important;
+    backdrop-filter: none !important;
+    pointer-events: auto !important;
+}
+
+.neighbor-start-screen .neighbor-title,
+.neighbor-start-screen .neighbor-subtitle {
+    display: none !important;
+}
+
+.neighbor-start-screen .neighbor-start-btn {
+    position: relative;
+    z-index: 2;
+    min-width: 230px;
+    height: 78px;
+    font-size: 30px;
+}
+
+.neighbor-controls {
+    display: none !important;
+}
+
+.neighbor-game-over {
+    z-index: 1120 !important;
+    background: rgba(2, 6, 23, .48) !important;
+    backdrop-filter: blur(3px) !important;
+}
+
+.neighbor-game-over .neighbor-start-btn {
+    pointer-events: auto !important;
+}
+
+.neighbor-title {
+    font-size: 34px !important;
+}
+
+.neighbor-subtitle {
+    font-size: 20px !important;
+}
+
+@media (max-width: 390px) {
+    .neighbor-score {
+        min-width: 140px !important;
+        font-size: 16px !important;
+    }
+
+    .neighbor-score span {
+        font-size: 27px;
+    }
+
+    .neighbor-start-screen .neighbor-start-btn {
+        min-width: 220px;
+        height: 74px;
+        font-size: 28px;
+    }
+}
