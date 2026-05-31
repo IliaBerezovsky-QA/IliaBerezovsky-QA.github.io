@@ -1425,7 +1425,7 @@ button {
 }
 
 
-/* DACHNY MSTITEL v2.7 */
+/* DACHNY MSTITEL v3.0 */
 .berserk-flash {
     position: absolute;
     inset: 0;
@@ -1510,4 +1510,33 @@ button {
     .berserk-notice-small {
         font-size: 18px;
     }
+}
+
+
+/* PERFORMANCE OPTIMIZATION v3.0 */
+.fruit,
+.feather,
+.plus,
+.hit-swipe,
+.crow,
+.crow img,
+.granny-img,
+.house-img {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.fruit.berserk-fruit {
+    font-size: 38px;
+    animation-duration: .85s;
+}
+
+.berserk-flash {
+    will-change: opacity;
+    transform: translateZ(0);
+}
+
+.berserk-notice {
+    will-change: transform, opacity;
 }

@@ -19,13 +19,14 @@ let berserkFruitTimer = null;
 let berserkBaseLevel = 1;
 let berserkHitCount = 0;
 let isBerserkShotAnimating = false;
+let berserkVisualTick = 0;
 
 const upgradeCosts = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
 const BERSERK_TRIGGER_DISTANCE = 300;
 const BERSERK_REQUIRED_HITS = 3;
 const BERSERK_SHOT_DURATION_MS = 3000;
 const BERSERK_SKIN_INTERVAL_MS = 120;
-const BERSERK_FRUIT_INTERVAL_MS = 120;
+const BERSERK_FRUIT_INTERVAL_MS = 180;
 
 const houseNames = [
     "Шалаш",
@@ -895,6 +896,7 @@ function hitBerserkCrow() {
     isBerserkShotAnimating = true;
     berserkHitCount++;
     berserkShotIndex = 0;
+    berserkVisualTick = 0;
 
     playBerserkSound();
 
@@ -940,12 +942,19 @@ function hitBerserkCrow() {
     }, BERSERK_SKIN_INTERVAL_MS);
 
     berserkFruitTimer = setInterval(() => {
+        berserkVisualTick++;
+
         const bonusReward = generateBerserkBonusReward();
 
         createBerserkFruitBurst(bonusReward, false);
-        createPlusFromElement(crow, `+${bonusReward.score}`);
-        totalFruitScore += bonusReward.score;
-        updateUI();
+
+        if (berserkVisualTick % 3 === 0) {
+            createPlusFromElement(crow, `+${bonusReward.score}`);
+        }
+
+        if (berserkVisualTick % 2 === 0) {
+            updateUI();
+        }
     }, BERSERK_FRUIT_INTERVAL_MS);
 
     if (berserkFinishTimer) {
@@ -1053,11 +1062,11 @@ function createBerserkFruitBurst(reward, isMainReward) {
     for (let i = 0; i < reward.berries * fruitMultiplier; i++) fruits.push("🫐");
     for (let i = 0; i < reward.pumpkins * fruitMultiplier; i++) fruits.push("🎃");
 
-    while (fruits.length < 18) {
+    while (fruits.length < 10) {
         fruits.push(getRandomItem(["🍎", "🫐", "🎃"]));
     }
 
-    const limitedFruits = fruits.slice(0, isMainReward ? 28 : 20);
+    const limitedFruits = fruits.slice(0, isMainReward ? 18 : 10);
     const rect = crow.getBoundingClientRect();
 
     limitedFruits.forEach((fruitIcon) => {
