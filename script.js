@@ -179,6 +179,8 @@ berserkSound.volume = 1.0;
 let isMusicStarted = false;
 
 let flappyCtx = flappyCanvas ? flappyCanvas.getContext("2d") : null;
+const flappyLarisa = new Image();
+flappyLarisa.src = "assets/larisa.png";
 let flappyAnimationId = null;
 let flappyRunning = false;
 let flappyBirdY = 220;
@@ -1430,9 +1432,7 @@ function drawFlappyIntro() {
     const rect = flappyMode.getBoundingClientRect();
     drawFlappyBackground(rect.width, rect.height);
 
-    flappyCtx.font = "52px Arial";
-    flappyCtx.textAlign = "center";
-    flappyCtx.fillText("🐦", rect.width / 2, rect.height / 2 - 86);
+    drawFlappyLarisa(rect.width / 2, rect.height / 2 - 86, 86, 64, -0.08);
 
     flappyCtx.fillStyle = "rgba(255,255,255,.75)";
     flappyCtx.font = "900 18px Arial";
@@ -1454,13 +1454,37 @@ function drawFlappyGame() {
         drawFlappyObstacle(pipe.x, pipe.topHeight + pipe.gap, pipe.width, height - pipe.topHeight - pipe.gap, false);
     });
 
+    drawFlappyLarisa(
+        82,
+        flappyBirdY,
+        72,
+        54,
+        Math.max(-0.55, Math.min(0.75, flappyVelocity * 0.06))
+    );
+}
+
+function drawFlappyLarisa(x, y, width, height, rotation) {
+    if (!flappyCtx) return;
+
     flappyCtx.save();
-    flappyCtx.translate(82, flappyBirdY);
-    flappyCtx.rotate(Math.max(-0.55, Math.min(0.75, flappyVelocity * 0.06)));
-    flappyCtx.font = "46px Arial";
-    flappyCtx.textAlign = "center";
-    flappyCtx.textBaseline = "middle";
-    flappyCtx.fillText("🐦", 0, 0);
+    flappyCtx.translate(x, y);
+    flappyCtx.rotate(rotation);
+
+    if (flappyLarisa.complete && flappyLarisa.naturalWidth > 0) {
+        flappyCtx.drawImage(
+            flappyLarisa,
+            -width / 2,
+            -height / 2,
+            width,
+            height
+        );
+    } else {
+        flappyCtx.font = "46px Arial";
+        flappyCtx.textAlign = "center";
+        flappyCtx.textBaseline = "middle";
+        flappyCtx.fillText("🐦", 0, 0);
+    }
+
     flappyCtx.restore();
 }
 
@@ -1513,7 +1537,7 @@ function checkFlappyCollision() {
     const rect = flappyMode.getBoundingClientRect();
     const birdX = 82;
     const birdY = flappyBirdY;
-    const radius = 22;
+    const radius = 18;
 
     if (birdY - radius < 0 || birdY + radius > rect.height) {
         return true;
