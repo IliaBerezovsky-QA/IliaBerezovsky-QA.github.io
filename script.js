@@ -2286,3 +2286,7 @@ document.addEventListener("click", (event) => {
 });
 
 updateUI();
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js");
+}
