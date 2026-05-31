@@ -98,6 +98,8 @@ const neighborLeanBackBtn = document.getElementById("neighborLeanBackBtn");
 const neighborLeanForwardBtn = document.getElementById("neighborLeanForwardBtn");
 const prizesBtn = document.getElementById("prizesBtn");
 const prizesBackBtn = document.getElementById("prizesBackBtn");
+const musicPrizeCards = document.querySelectorAll(".music-prize-card");
+const musicPrizeEffect = document.getElementById("musicPrizeEffect");
 
 const applesText = document.getElementById("apples");
 const berriesText = document.getElementById("berries");
@@ -140,7 +142,9 @@ const newspaperModal = document.getElementById("newspaperModal");
 const newspaperText = document.getElementById("newspaperText");
 const newspaperCloseBtn = document.getElementById("newspaperCloseBtn");
 
-const bgMusic = new Audio("assets/fonsound.mp3");
+const DEFAULT_MUSIC_TRACK = "assets/fonsound.mp3";
+const SAVED_MUSIC_TRACK_KEY = "s6s-main-music-track";
+const bgMusic = new Audio(localStorage.getItem(SAVED_MUSIC_TRACK_KEY) || DEFAULT_MUSIC_TRACK);
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
 
@@ -422,6 +426,24 @@ prizesBackBtn.addEventListener("click", () => {
     startCrowFlight();
 });
 
+musicPrizeCards.forEach((card) => {
+    card.addEventListener("click", () => {
+        const track = card.dataset.track;
+        if (!track) return;
+
+        setMainMusicTrack(track);
+        activateMusicPrizeCard(card);
+        card.classList.remove("just-picked");
+        void card.offsetWidth;
+        card.classList.add("just-picked");
+        setTimeout(() => card.classList.remove("just-picked"), 460);
+        showMusicPrizeEffect(card);
+        createMusicPrizeParticles(card);
+    });
+});
+
+restoreMusicPrizeSelection();
+
 crow.addEventListener("click", (event) => {
     event.preventDefault();
     hitCrow();
@@ -527,6 +549,103 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "ArrowUp" || event.key === " " || event.key === "ArrowDown") handleNeighborControl("drop");
 });
 
+
+function setMainMusicTrack(track) {
+    const wasPlaying = isMusicStarted && !bgMusic.paused;
+
+    if (bgMusic.src.includes(track)) {
+        startMusic();
+        return;
+    }
+
+    localStorage.setItem(SAVED_MUSIC_TRACK_KEY, track);
+
+    bgMusic.pause();
+    bgMusic.src = track;
+    bgMusic.currentTime = 0;
+    bgMusic.loop = true;
+    bgMusic.volume = 0.5;
+
+    if (wasPlaying || isMusicStarted) {
+        isMusicStarted = false;
+        startMusic();
+    }
+}
+
+function activateMusicPrizeCard(selectedCard) {
+    musicPrizeCards.forEach((card) => {
+        card.classList.toggle("active", card === selectedCard);
+    });
+}
+
+function restoreMusicPrizeSelection() {
+    const savedTrack = localStorage.getItem(SAVED_MUSIC_TRACK_KEY) || DEFAULT_MUSIC_TRACK;
+
+    musicPrizeCards.forEach((card) => {
+        card.classList.toggle("active", card.dataset.track === savedTrack);
+    });
+}
+
+function showMusicPrizeEffect(card) {
+    if (!musicPrizeEffect || !card) return;
+
+    const screenRect = prizesScreen.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+
+    const x = cardRect.left - screenRect.left + cardRect.width / 2;
+    const y = cardRect.top - screenRect.top + cardRect.height / 2;
+
+    musicPrizeEffect.style.left = `${x}px`;
+    musicPrizeEffect.style.top = `${y}px`;
+
+    musicPrizeEffect.classList.remove("hidden");
+    musicPrizeEffect.classList.remove("run");
+    void musicPrizeEffect.offsetWidth;
+    musicPrizeEffect.classList.add("run");
+
+    setTimeout(() => {
+        musicPrizeEffect.classList.add("hidden");
+        musicPrizeEffect.classList.remove("run");
+    }, 1200);
+}
+
+function createMusicPrizeParticles(card) {
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const melodyIcons = ["♪", "♫", "♬", "♩", "🎶"];
+    const confettiIcons = ["✨", "⭐", "💛", "🟡", "🟠", "🎊"];
+
+    for (let i = 0; i < 12; i++) {
+        const note = document.createElement("div");
+        note.className = "floating-melody";
+        note.textContent = getRandomItem(melodyIcons);
+        note.style.left = `${centerX + random(-22, 22)}px`;
+        note.style.top = `${centerY + random(-10, 12)}px`;
+        note.style.setProperty("--x", `${random(-120, 120)}px`);
+        note.style.setProperty("--y", `${random(-180, -82)}px`);
+        note.style.setProperty("--rotate", `${random(-28, 28)}deg`);
+        note.style.animationDelay = `${i * 0.025}s`;
+        document.body.appendChild(note);
+        setTimeout(() => note.remove(), 1300);
+    }
+
+    for (let i = 0; i < 22; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "music-confetti";
+        confetti.textContent = getRandomItem(confettiIcons);
+        confetti.style.left = `${centerX + random(-28, 28)}px`;
+        confetti.style.top = `${centerY + random(-18, 18)}px`;
+        confetti.style.setProperty("--x", `${random(-170, 170)}px`);
+        confetti.style.setProperty("--y", `${random(90, 245)}px`);
+        confetti.style.setProperty("--rotate", `${random(-280, 280)}deg`);
+        confetti.style.animationDelay = `${i * 0.014}s`;
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 1250);
+    }
+}
 
 function startPawWalk() {
     if (!pawTrack || pawWalkTimer) return;
@@ -2492,5 +2611,5 @@ document.addEventListener("click", (event) => {
 updateUI();
 
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js?v=5.1");
+    navigator.serviceWorker.register("./sw.js?v=5.5");
 }

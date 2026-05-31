@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="assets/icon.png">
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=5.1">
+    <link rel="stylesheet" href="style.css?v=5.5">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
                 <div id="pawTrack" class="paw-track"></div>
 
                 <div class="creator-sign">
-                    created by iBerezovski ver.043
+                    created by iBerezovski ver.047
                 </div>
 
                 <img
@@ -234,6 +234,7 @@
                     🎁
                     <span>Призы</span>
                 </button>
+                <div class="prizes-new-badge">NEW</div>
 
                 <div id="effects" class="effects"></div>
 
@@ -258,26 +259,70 @@
 
             <div class="prizes-content">
 
-                <h1>
-                    А призы под елочкой<br>
-                    на Новый год... 🫵🏻😎
-                </h1>
+                <img
+                    class="prizes-bg-image"
+                    src="assets/fonpriz.png"
+                    onerror="this.onerror=null; this.src='assets/fonpriz.jpg';"
+                    alt="Фон призов">
 
-                <video
-                    class="mem-video"
-                    autoplay
-                    muted
-                    loop
-                    playsinline>
+                <div class="prizes-shade"></div>
 
-                    <source
-                        src="assets/mem.webm"
-                        type="video/webm">
-                </video>
+                <div class="music-prizes-row" aria-label="Выбор музыки">
 
-                <p class="prizes-bottom-text">
-                    или нет?
-                </p>
+                    <button
+                        class="music-prize-card"
+                        type="button"
+                        data-track="assets/fonsound.mp3"
+                        data-prize="default">
+                        <span class="music-prize-icon">📻</span>
+                        <span class="music-prize-title">Стандарт</span>
+                        <span class="music-prize-subtitle">Фон</span>
+                    </button>
+
+                    <button
+                        class="music-prize-card"
+                        type="button"
+                        data-track="assets/priz1.mp3"
+                        data-prize="1">
+                        <span class="music-prize-icon">🎁</span>
+                        <span class="music-prize-title">Приз 1</span>
+                        <span class="music-prize-subtitle">Трек</span>
+                    </button>
+
+                    <button
+                        class="music-prize-card"
+                        type="button"
+                        data-track="assets/priz2.mp3"
+                        data-prize="2">
+                        <span class="music-prize-icon">🎧</span>
+                        <span class="music-prize-title">Приз 2</span>
+                        <span class="music-prize-subtitle">Трек</span>
+                    </button>
+
+                    <button
+                        class="music-prize-card"
+                        type="button"
+                        data-track="assets/priz3.mp3"
+                        data-prize="3">
+                        <span class="music-prize-icon">🎵</span>
+                        <span class="music-prize-title">Приз 3</span>
+                        <span class="music-prize-subtitle">Трек</span>
+                    </button>
+
+                </div>
+
+                <div class="prizes-title-card">
+                    <h1>Выбери музыкальный приз</h1>
+                    <p>Нажми на подарок - и основная музыка игры изменится во всех разделах.</p>
+                </div>
+
+                <div id="musicPrizeEffect" class="music-prize-effect hidden">
+                    <div class="music-wave music-wave-one"></div>
+                    <div class="music-wave music-wave-two"></div>
+                    <div class="music-note music-note-one">♪</div>
+                    <div class="music-note music-note-two">♫</div>
+                    <div class="music-note music-note-three">♬</div>
+                </div>
 
             </div>
 
@@ -285,7 +330,7 @@
 
     </div>
 
-    <script src="script.js?v=5.1"></script>
+    <script src="script.js?v=5.5"></script>
 
 </body>
 </html>
