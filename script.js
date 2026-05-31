@@ -10,8 +10,22 @@ let isNewspaperActive = false;
 let lastTouchEndTime = 0;
 let pawStepIndex = 0;
 let pawWalkTimer = null;
+let isBerserkActive = false;
+let isBerserkQueued = false;
+let berserkShotIndex = 0;
+let berserkSkinTimer = null;
+let berserkFinishTimer = null;
+let berserkFruitTimer = null;
+let berserkBaseLevel = 1;
+let berserkHitCount = 0;
+let isBerserkShotAnimating = false;
 
 const upgradeCosts = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+const BERSERK_TRIGGER_DISTANCE = 300;
+const BERSERK_REQUIRED_HITS = 3;
+const BERSERK_SHOT_DURATION_MS = 3000;
+const BERSERK_SKIN_INTERVAL_MS = 120;
+const BERSERK_FRUIT_INTERVAL_MS = 120;
 
 const houseNames = [
     "Шалаш",
@@ -94,8 +108,26 @@ const houseLevelText = document.getElementById("houseLevel");
 
 const crow = document.getElementById("crow");
 const crowImg = document.getElementById("crowImg");
+
+let crowFlightTimer = null;
+let isCrowFlying = false;
+let crowTargetIndex = 0;
+
+const crowFlightPoints = [
+    { x: 48, y: 122 },
+    { x: 155, y: 142 },
+    { x: 238, y: 92 },
+    { x: 64, y: 238 },
+    { x: 212, y: 268 },
+    { x: 280, y: 196 },
+    { x: 122, y: 346 },
+    { x: 254, y: 360 }
+];
+
 const granny = document.getElementById("granny");
 const hitSwipe = document.getElementById("hitSwipe");
+const berserkFlash = document.getElementById("berserkFlash");
+const berserkNotice = document.getElementById("berserkNotice");
 
 const levelUpOverlay = document.getElementById("levelUpOverlay");
 const levelUpText = document.getElementById("levelUpText");
@@ -139,6 +171,9 @@ hitSoundSpecial.volume = 1.0;
 
 const levelUpSound = new Audio("assets/kia3.mp3");
 levelUpSound.volume = 1.0;
+
+const berserkSound = new Audio("assets/berserksvuk.mp3");
+berserkSound.volume = 1.0;
 
 let isMusicStarted = false;
 
@@ -322,6 +357,7 @@ backBtn.addEventListener("click", () => {
     prizesScreen.classList.add("hidden");
     newspaperDelivery.classList.add("hidden");
     newspaperModal.classList.add("hidden");
+    stopCrowFlight();
     stopFlappyGame();
     if (flappyMode) flappyMode.classList.add("hidden");
     stopNeighborGame();
@@ -330,6 +366,7 @@ backBtn.addEventListener("click", () => {
 
     isLevelUpActive = false;
     isNewspaperActive = false;
+    stopBerserkMode(true);
 
     startPawWalk();
 
@@ -341,6 +378,7 @@ backBtn.addEventListener("click", () => {
 
 prizesBtn.addEventListener("click", () => {
     startMusic();
+    stopCrowFlight();
     game.classList.add("hidden");
     prizesScreen.classList.remove("hidden");
 });
@@ -348,6 +386,7 @@ prizesBtn.addEventListener("click", () => {
 prizesBackBtn.addEventListener("click", () => {
     prizesScreen.classList.add("hidden");
     game.classList.remove("hidden");
+    startCrowFlight();
 });
 
 crow.addEventListener("click", (event) => {
@@ -585,6 +624,7 @@ function showGame() {
     onboarding.classList.add("hidden");
     prizesScreen.classList.add("hidden");
     game.classList.remove("hidden");
+    startCrowFlight();
 }
 
 function updateUI() {
@@ -600,15 +640,115 @@ function updateUI() {
 
     if (nextCost) {
         document.querySelector(".house-next").innerHTML =
-            `До улучшения: <span id="nextUpgrade">${nextCost - totalFruitScore}</span>`;
+            `До улучшения: <span id="nextUpgrade">${Math.max(0, nextCost - totalFruitScore)}</span>`;
     } else {
         document.querySelector(".house-next").textContent =
             "Продолжай, скоро приз 😎";
     }
 }
 
+
+function startCrowFlight() {
+    if (!crow || !game || game.classList.contains("hidden")) return;
+    if (isCrowFlying) return;
+
+    isCrowFlying = true;
+    crow.classList.add("crow-flying");
+    moveCrowToRandomPoint(true);
+    scheduleNextCrowFlight();
+}
+
+function stopCrowFlight() {
+    isCrowFlying = false;
+
+    if (crowFlightTimer) {
+        clearTimeout(crowFlightTimer);
+        crowFlightTimer = null;
+    }
+}
+
+function scheduleNextCrowFlight() {
+    if (!isCrowFlying) return;
+
+    if (crowFlightTimer) {
+        clearTimeout(crowFlightTimer);
+    }
+
+    const delay = random(1800, 3600);
+
+    crowFlightTimer = setTimeout(() => {
+        if (!isCrowFlying) return;
+        moveCrowToRandomPoint(false);
+        scheduleNextCrowFlight();
+    }, delay);
+}
+
+function moveCrowToRandomPoint(isInstant) {
+    if (!crow) return;
+
+    const farm = document.querySelector(".farm");
+    if (!farm) return;
+
+    const farmRect = farm.getBoundingClientRect();
+    const crowRect = crow.getBoundingClientRect();
+    const crowWidth = Math.max(150, crowRect.width || 240);
+    const crowHeight = Math.max(105, crowRect.height || 170);
+
+    let point = getRandomItem(crowFlightPoints);
+
+    if (crowFlightPoints.length > 1) {
+        let guard = 0;
+        while (crowFlightPoints.indexOf(point) === crowTargetIndex && guard < 8) {
+            point = getRandomItem(crowFlightPoints);
+            guard++;
+        }
+    }
+
+    crowTargetIndex = crowFlightPoints.indexOf(point);
+
+    const maxLeft = Math.max(8, farmRect.width - crowWidth + 26);
+    const maxTop = Math.max(96, farmRect.height - crowHeight - 22);
+    const targetLeft = Math.max(8, Math.min(maxLeft, point.x + random(-26, 26)));
+    const targetTop = Math.max(92, Math.min(maxTop, point.y + random(-22, 22)));
+
+    if (isInstant) {
+        crow.classList.add("crow-no-transition");
+    }
+
+    crow.style.left = `${targetLeft}px`;
+    crow.style.top = `${targetTop}px`;
+    crow.style.setProperty("--crow-tilt", `${random(-8, 8)}deg`);
+
+    if (isInstant) {
+        requestAnimationFrame(() => {
+            crow.classList.remove("crow-no-transition");
+        });
+    }
+}
+
+function makeCrowFlyAway() {
+    if (!crow || !isCrowFlying) return;
+
+    crow.classList.add("crow-rush");
+    moveCrowToRandomPoint(false);
+
+    if (crowFlightTimer) {
+        clearTimeout(crowFlightTimer);
+    }
+
+    setTimeout(() => {
+        crow.classList.remove("crow-rush");
+        scheduleNextCrowFlight();
+    }, 460);
+}
+
 function hitCrow() {
     if (isLevelUpActive || isNewspaperActive) return;
+
+    if (isBerserkActive) {
+        hitBerserkCrow();
+        return;
+    }
 
     startMusic();
 
@@ -630,12 +770,15 @@ function hitCrow() {
     showCrowPhrase();
     showGrannyPhrase(grannyPhrase);
     createPlusFromElement(crow, `+${reward.score}`);
+    makeCrowFlyAway();
 
     totalFruitScore += reward.score;
 
-    tryUpgradeHouse();
+    handleBerserkOrUpgrade();
 
     setTimeout(() => {
+        if (isBerserkActive) return;
+
         crow.classList.remove("damage");
         granny.classList.remove("hit");
 
@@ -661,6 +804,265 @@ function generateFruitReward() {
         pumpkins: pumpkinGain,
         score: appleGain * 10 + berryGain * 25 + pumpkinGain * 75
     };
+}
+
+function generateBerserkBonusReward() {
+    const appleGain = random(3, 7) * fruitPower;
+    const berryGain = random(2, 5) * fruitPower;
+    const pumpkinGain = Math.random() > 0.45 ? random(1, 2) * fruitPower : 0;
+
+    apples += appleGain;
+    berries += berryGain;
+    pumpkins += pumpkinGain;
+
+    return {
+        apples: appleGain,
+        berries: berryGain,
+        pumpkins: pumpkinGain,
+        score: appleGain * 10 + berryGain * 25 + pumpkinGain * 75
+    };
+}
+
+function handleBerserkOrUpgrade() {
+    const nextCost = getNextCost();
+
+    if (!nextCost) return;
+
+    const leftToUpgrade = nextCost - totalFruitScore;
+
+    if (!isBerserkQueued && !isBerserkActive && leftToUpgrade <= BERSERK_TRIGGER_DISTANCE) {
+        startBerserkMode();
+        return;
+    }
+
+    if (!isBerserkActive && totalFruitScore >= nextCost) {
+        tryUpgradeHouse();
+    }
+}
+
+function startBerserkMode() {
+    if (isBerserkActive || isBerserkQueued || isLevelUpActive || isNewspaperActive) return;
+
+    isBerserkActive = true;
+    isBerserkQueued = true;
+    isBerserkShotAnimating = false;
+    berserkShotIndex = 0;
+    berserkHitCount = 0;
+    berserkBaseLevel = houseLevel;
+
+    startMusic();
+    stopCrowFlight();
+
+    granny.classList.remove("hit");
+    granny.classList.remove("berserk-shot");
+    crow.classList.remove("damage");
+
+    granny.src = "assets/berserk1.png";
+    crowImg.src = "assets/crow.png";
+    hitSwipe.src = "assets/hit berserk.png";
+
+    if (berserkFlash) {
+        berserkFlash.classList.remove("hidden");
+        berserkFlash.classList.remove("run");
+        void berserkFlash.offsetWidth;
+        berserkFlash.classList.add("run");
+    }
+
+    if (berserkNotice) {
+        berserkNotice.classList.remove("hidden");
+        berserkNotice.classList.remove("show");
+        void berserkNotice.offsetWidth;
+        berserkNotice.classList.add("show");
+    }
+
+    showGrannyPhrase("Дачный мститель!");
+    updateUI();
+}
+
+function hitBerserkCrow() {
+    if (!isBerserkActive || isBerserkShotAnimating) return;
+
+    isBerserkShotAnimating = true;
+    berserkHitCount++;
+    berserkShotIndex = 0;
+
+    playBerserkSound();
+
+    crowImg.src = "assets/crow-hit.png";
+    restartAnimation(crow, "damage");
+
+    showHitSwipe();
+
+    const reward = generateFruitReward();
+    const nextCost = getNextCost();
+    const hitsLeftIncludingCurrent = Math.max(1, BERSERK_REQUIRED_HITS - berserkHitCount + 1);
+
+    if (nextCost) {
+        const missingScore = Math.max(0, nextCost - totalFruitScore);
+        const neededForThisHit = Math.ceil(missingScore / hitsLeftIncludingCurrent);
+        reward.score = Math.max(reward.score, neededForThisHit);
+    }
+
+    createBerserkFruitBurst(reward, true);
+    createFeathers();
+    createPlusFromElement(crow, `+${reward.score}`);
+    showCrowPhrase();
+
+    totalFruitScore += reward.score;
+    updateUI();
+
+    if (berserkSkinTimer) {
+        clearInterval(berserkSkinTimer);
+        berserkSkinTimer = null;
+    }
+
+    if (berserkFruitTimer) {
+        clearInterval(berserkFruitTimer);
+        berserkFruitTimer = null;
+    }
+
+    berserkSkinTimer = setInterval(() => {
+        berserkShotIndex++;
+        granny.src = berserkShotIndex % 2 === 0
+            ? "assets/berserk2.png"
+            : "assets/berserk3.png";
+        restartAnimation(granny, "berserk-shot");
+    }, BERSERK_SKIN_INTERVAL_MS);
+
+    berserkFruitTimer = setInterval(() => {
+        const bonusReward = generateBerserkBonusReward();
+
+        createBerserkFruitBurst(bonusReward, false);
+        createPlusFromElement(crow, `+${bonusReward.score}`);
+        totalFruitScore += bonusReward.score;
+        updateUI();
+    }, BERSERK_FRUIT_INTERVAL_MS);
+
+    if (berserkFinishTimer) {
+        clearTimeout(berserkFinishTimer);
+        berserkFinishTimer = null;
+    }
+
+    berserkFinishTimer = setTimeout(() => {
+        if (berserkSkinTimer) {
+            clearInterval(berserkSkinTimer);
+            berserkSkinTimer = null;
+        }
+
+        if (berserkFruitTimer) {
+            clearInterval(berserkFruitTimer);
+            berserkFruitTimer = null;
+        }
+
+        crow.classList.remove("damage");
+        granny.classList.remove("berserk-shot");
+        crowImg.src = "assets/crow.png";
+        granny.src = "assets/berserk1.png";
+        isBerserkShotAnimating = false;
+
+        if (berserkHitCount >= BERSERK_REQUIRED_HITS) {
+            stopBerserkMode(false);
+        }
+    }, BERSERK_SHOT_DURATION_MS);
+}
+
+function stopBerserkMode(isHardReset) {
+    if (berserkSkinTimer) {
+        clearInterval(berserkSkinTimer);
+        berserkSkinTimer = null;
+    }
+
+    if (berserkFinishTimer) {
+        clearTimeout(berserkFinishTimer);
+        berserkFinishTimer = null;
+    }
+
+    if (berserkFruitTimer) {
+        clearInterval(berserkFruitTimer);
+        berserkFruitTimer = null;
+    }
+
+    if (berserkFlash) {
+        berserkFlash.classList.add("hidden");
+        berserkFlash.classList.remove("run");
+    }
+
+    if (berserkNotice) {
+        berserkNotice.classList.add("hidden");
+        berserkNotice.classList.remove("show");
+    }
+
+    hitSwipe.src = "assets/hit-swipe.png";
+    crow.classList.remove("damage");
+    granny.classList.remove("hit");
+    granny.classList.remove("berserk-shot");
+    crowImg.src = "assets/crow.png";
+    granny.src = "assets/granny.png";
+
+    isBerserkActive = false;
+    isBerserkShotAnimating = false;
+
+    if (isHardReset) {
+        isBerserkQueued = false;
+        berserkHitCount = 0;
+        return;
+    }
+
+    const nextCost = getNextCost();
+    if (nextCost && totalFruitScore < nextCost) {
+        totalFruitScore = nextCost;
+    }
+
+    tryUpgradeHouse();
+
+    isBerserkQueued = false;
+    berserkHitCount = 0;
+
+    if (!game.classList.contains("hidden")) {
+        startCrowFlight();
+    }
+
+    updateUI();
+}
+
+function playBerserkSound() {
+    const sound = berserkSound.cloneNode();
+    sound.volume = 1.0;
+    sound.currentTime = 0;
+    sound.play().catch((error) => {
+        console.log("Звук дачного мстителя не запустился:", error);
+    });
+}
+
+function createBerserkFruitBurst(reward, isMainReward) {
+    const fruits = [];
+
+    const fruitMultiplier = isMainReward ? 3 : 2;
+
+    for (let i = 0; i < reward.apples * fruitMultiplier; i++) fruits.push("🍎");
+    for (let i = 0; i < reward.berries * fruitMultiplier; i++) fruits.push("🫐");
+    for (let i = 0; i < reward.pumpkins * fruitMultiplier; i++) fruits.push("🎃");
+
+    while (fruits.length < 18) {
+        fruits.push(getRandomItem(["🍎", "🫐", "🎃"]));
+    }
+
+    const limitedFruits = fruits.slice(0, isMainReward ? 28 : 20);
+    const rect = crow.getBoundingClientRect();
+
+    limitedFruits.forEach((fruitIcon) => {
+        const fruit = document.createElement("div");
+        fruit.className = "fruit berserk-fruit";
+        fruit.textContent = fruitIcon;
+
+        fruit.style.left = `${rect.left + rect.width / 2 + random(-35, 35)}px`;
+        fruit.style.top = `${rect.top + rect.height / 2 + random(-25, 25)}px`;
+        fruit.style.setProperty("--x", `${random(-230, 230)}px`);
+        fruit.style.setProperty("--y", `${random(210, 390)}px`);
+
+        document.body.appendChild(fruit);
+        setTimeout(() => fruit.remove(), 1200);
+    });
 }
 
 function tryUpgradeHouse() {
@@ -873,6 +1275,7 @@ function openFlappyMode() {
     if (!flappyMode || !flappyCanvas) return;
 
     startMusic();
+    stopCrowFlight();
     closeNeighborMode();
 
     flappyMode.classList.remove("hidden");
@@ -889,6 +1292,10 @@ function closeFlappyMode() {
 
     if (flappyMode) {
         flappyMode.classList.add("hidden");
+    }
+
+    if (!game.classList.contains("hidden")) {
+        startCrowFlight();
     }
 }
 
@@ -1150,6 +1557,7 @@ function openNeighborMode() {
     if (!neighborMode || !neighborCanvas) return;
 
     startMusic();
+    stopCrowFlight();
     closeFlappyMode();
 
     neighborMode.classList.remove("hidden");
@@ -1167,6 +1575,10 @@ function closeNeighborMode() {
 
     if (neighborMode) {
         neighborMode.classList.add("hidden");
+    }
+
+    if (!game.classList.contains("hidden")) {
+        startCrowFlight();
     }
 }
 
